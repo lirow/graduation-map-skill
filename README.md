@@ -1,158 +1,138 @@
 # Graduation Map Skill · 毕业去向地图
 
-**把一张录取去向图，整理成一个能校对、能维护、能随身打开的班级地图。**
+把毕业去向资料交给你的 Agent，得到能搜索、校对、旋转缩放的班级地图。
 
-An Agent Skill and portable toolkit for turning a class roster or admission-map image into an editable, single-file interactive map. Includes a data model, page template and build tools; no API key is required for the bundled offline map.
+这是供 **Agent 使用的 skill**：理解资料、拆分名单、核对冲突、查证学校位置并制作成品。直接给图片、TXT、Excel、对话或混合资料，无需先写 JSON 或自行运行脚本。
 
-![桌面示例](docs/desktop.png)
+公开仓库：[lirow/graduation-map-skill](https://github.com/lirow/graduation-map-skill)。
+所有演示姓名、学校及其关联均为虚构。
 
-> 本仓库的姓名、学校及其关联均为虚构演示。没有真实班级名单、私人图片或个人配置。
+## 安装到自己的 Agent
 
-## 能做什么
+### 直接让 Agent 安装
 
-- **图片 → 名单 → 校对 → 地图**：低清姓名保留疑点，按稳定 ID 应用用户更正。
-- **由远及近查看**：省份／国家人数 → 学校聚合 → 点位、姓名和引线。
-- **可旋转的立体地图**：平移、缩放、倾斜、旋转，支持手机双指操作。
-- **母校连线开关**：有有效母校坐标时默认开启，在地图图层面板中可随时关闭；`MAP_CONFIG.showRoutes` 可修改默认值。
-- **一个 HTML 即可交付**：地图引擎、地理轮廓、业务数据、样式和逻辑内嵌。
-- **数据与展示分离**：修改页面前部的数据变量并刷新，统计、名单、地图和导出同步更新。
-- **容纳不完整资料**：只知道省份、学校坐标未查到、海外去向、校区不确定，都能明确展示。
-
-| 功能 | 是否需要网络 |
-|---|---|
-| 生成 HTML、查看内置地图、搜索名单、缩放旋转 | 不需要 |
-| 查看已内嵌的原始图片 | 不需要 |
-| 学校周边道路、地名与建筑详情 | 需要，按用户操作加载 OpenFreeMap |
-
-浏览器需要支持 WebGL。校区点是地图中的代表位置，不能仅凭学校名称推断某位同学当年的实际校区。
-
-## 先看成品
-
-下载仓库中的 [examples/demo.html](examples/demo.html)，用现代浏览器打开。GitHub 的文件预览不会运行 HTML；请下载文件后打开。
-
-示例包括多人同校、国内／海外去向、缺失坐标，以及仅知道省份的记录。
-
-<img src="docs/mobile.png" alt="手机示例" width="280">
-
-## 作为 Skill 使用
-
-技能入口是 [`skills/graduation-map/SKILL.md`](skills/graduation-map/SKILL.md)。把 **整个 `graduation-map` 目录**放入你的 Agent 支持的技能目录，或使用客户端的 GitHub skill 安装功能。具体安装位置以客户端文档为准；本仓库不修改你的全局 Agent 配置。
-
-支持技能调用的客户端可以使用：
+将下面的话发给有文件访问能力的 Agent：
 
 ```text
-使用 $graduation-map，把这张录取去向图片做成单页 HTML。
-姓名看不清的先标注待核，学校位置和当年就读校区分开记录。
+请从 https://github.com/lirow/graduation-map-skill 安装 graduation-map skill。
+技能在仓库的 skills/graduation-map/，请检查后将整个目录安装到
+你支持的技能目录，保留 references、assets、scripts 等配套文件。
+不要只复制 SKILL.md。不要覆盖同名的本地定制版本；已有安装时先比较差异。
+安装后读取 SKILL.md，告诉我是否识别到此技能。
 ```
 
-```text
-使用 $graduation-map，按我的校对 CSV 更新姓名，保留原始证据，
-并验证地图和导出数据中的人数、学校关联都同步更新。
-```
+客户端支持 GitHub 技能安装时，仓库填 `lirow/graduation-map-skill`，子目录填 `skills/graduation-map`。
 
-这是可复用的工作流与工具，不是一个自动上传图片到云端 OCR 的服务。图像识别由所用 Agent 的视觉／OCR 能力完成，用户确认仍然是纠正模糊人名的依据。
+### 手动放入技能目录
 
-## 不使用 Agent，也能生成页面
+下载仓库 ZIP 或克隆仓库，把 `skills/graduation-map` **整个文件夹**放入客户端支持的技能目录，最终应能找到 `技能目录/graduation-map/SKILL.md`。仓库根目录本身不是技能入口。
 
-构建只需 **Python 3.10+ 标准库**，不需要 Node.js、npm、服务端或数据库。
+以 Codex 为例，可用用户级 `~/.agents/skills/graduation-map/`，或项目级 `.agents/skills/graduation-map/`。在目标不存在的前提下，macOS/Linux 可执行：
 
 ```sh
 git clone https://github.com/lirow/graduation-map-skill.git
-cd graduation-map-skill
-
-python3 skills/graduation-map/scripts/validate_data.py --data examples/demo-data.json
-python3 skills/graduation-map/scripts/build.py \
-  --data examples/demo-data.json \
-  --output output/class-map.html
+mkdir -p ~/.agents/skills
+test ! -e ~/.agents/skills/graduation-map && \
+  cp -R graduation-map-skill/skills/graduation-map ~/.agents/skills/graduation-map
 ```
 
-将 `examples/demo-data.json` 复制到自己的工作目录后编辑。附加本地原图时显式传入：
+已有同名目录时复制会停止，请比较后更新。其他 Agent 按其文档选择目录；不支持自动发现时可显式要求读取 `SKILL.md` 及相关参考。安装后刷新技能或新开会话。
 
-```sh
-python3 skills/graduation-map/scripts/build.py \
-  --data /path/to/my-class.json \
-  --source-image /path/to/admission-map.jpg \
-  --output /path/to/my-class-map.html
-```
+安装路径参考：[Codex 官方技能文档](https://developers.openai.com/codex/skills/)。
 
-**输出 HTML 会包含名单和完整原图。**分享前检查其内容，隐藏面板不等于移除个人数据。不要把真实输入放入本公开仓库或公开 Git 历史。
+## 怎样输入数据源
 
-## 数据怎么维护
+在 Agent 的对话中上传附件、直接粘贴文字，或提供它能访问的本地文件/文件夹。你不必使用固定模板，说明班级、届别和是否完整会更有帮助。
 
-生成后的 HTML 前部有可直接编辑的变量：
+| 你的资料 | 给 Agent 的方式 | Agent 要做的分析 |
+|---|---|---|
+| 一张或多张录取图、聊天截图 | 上传图片或给本地路径 | 分区识读、数行、检查重叠，模糊姓名待核 |
+| TXT / Markdown | 上传文档或粘贴原文 | 识别学校分组、一行多人和跨行记录，保留原行号 |
+| Excel / CSV / TSV | 上传原始表格 | 检查多 sheet、表头、合并单元格、公式和汇总，按人对账 |
+| 对话录入、后续更正 | 直接逐条发送或整段粘贴 | 区分新增/更正/确认，按稳定 ID 更新，同名先区分 |
+| PDF / Word、扫描名单 | 上传文件 | 区分文字和扫描内容，处理表格、分页和重复表头 |
+| 在线表格、网页、问卷/邮件导出 | 提供有权读取的链接或导出文件 | 检查分页、筛选和多次提交；权限不足时说明缺口 |
+| JSON、已有地图、多文件资料包 | 给文件或文件夹 | 提取业务数据，分清版本、原始/修订/汇总，跨来源去重 |
+| 语音名单 | 客户端可转写时发送 | 以转写稿分析，同音姓名和学校简称待核 |
 
-| 变量 | 负责内容 |
-|---|---|
-| `CLASS_INFO` | 班级、年份、名单完整性、是否为示例 |
-| `ALMA_MATER` | 母校、就读校区、地址、坐标和确认状态 |
-| `SCHOOLS` | 录取学校／校区，使用唯一 `id` |
-| `GRADUATES` | 同学姓名及关联的 `schoolId` |
-| `REGION_CONFIG` | 特殊地区的标签位置与地图名称 |
-| `MAP_CONFIG` | 初始视角、缩放限制和地图资源配置 |
+格式支持取决于 Agent 的读取工具；读不了时应说明限制并尝试替代方式，不能声称已读取。含姓名资料的提供方式与分享范围由你决定。
 
-`CLASS_MAP_DATA` 统一引用上述对象。数据处理层计算统计，展示层负责界面和地图；没有另一份手工维护的人数汇总。
-
-同校不同校区可以使用不同学校 ID。学校位置只维护一次；学生用 `schoolId` 关联。未知经纬度用 `null`，不会用省会坐标冒充学校点。详见 [数据字段](skills/graduation-map/references/data-schema.md)。
-
-### 批量应用姓名校正
-
-CSV 使用稳定 ID，不依赖排序：
-
-```csv
-id,name
-demo-01,演示姓名甲
-demo-02,演示姓名乙
-```
-
-```sh
-python3 skills/graduation-map/scripts/import_corrections.py \
-  --data examples/demo-data.json \
-  --corrections examples/corrections.csv \
-  --output output/corrected.json
-```
-
-工具拒绝重复 ID、未知 ID 和空姓名。再用更正后的 JSON 构建页面即可。
-
-## 验证与开发
-
-```sh
-python3 -m unittest discover -s tests -p 'test_*.py' -v
-node tests/model.cjs
-
-# 可选浏览器回归：需要 Node.js 20+，不是用户打开页面的依赖
-npm ci
-npx playwright install chromium
-npm run test:browser
-```
-
-浏览器回归包含离线文件打开、姓名搜索、学校／地区切换、手机按钮可点击性及 CDP 双指触摸输入。触摸模拟与实体手机测试是不同的验证，详见 [验证流程](skills/graduation-map/references/verification.md)。
-
-## 仓库结构
+### 一次给出资料，直接要成品
 
 ```text
-skills/graduation-map/
-  SKILL.md                  技能入口
-  agents/openai.yaml        技能界面元数据
-  scripts/                  构建、数据校验、姓名校正
-  references/               识图、数据规范、验证、发布说明
-  assets/runtime/           页面模板、数据模型、展示逻辑
-  assets/geo/               内置省级／世界轮廓
-  assets/vendor/            固定版本地图引擎与许可证
-examples/                   虚构数据、CSV、生成的单文件演示
-tests/                      工具、数据模型与浏览器回归
-docs/                       虚构示例截图
+使用 $graduation-map，分析我上传的名单.txt、毕业去向.xlsx 和两张截图。
+这是 2020 届示例班，Excel“最终名单”是明细，“汇总”只用于对账；
+后续我在对话里的明确更正按对应人员应用。
+请先合并重复记录、列出姓名/学校/校区疑点，再交付一个可直接打开的 HTML。
+未知信息保留待补，不要编造姓名或学校坐标；成品放到我指定的输出目录。
 ```
 
-## 当前边界
+只给一张图片、一份表格或一段文字也可以。不要求多种资料同时具备。
 
-- 中国省级地区是主要概览；海外去向使用国家标签与学校点位。
-- 内置轮廓经过简化，用于分布展示，不能代替测绘数据。
-- 本工具不会自动核实个人就读经历，也不会把学校现址等同于历史校区。
-- 没有后台、多用户编辑或自动同步；本地编辑 JSON／HTML 后重新生成或刷新。
-- 在线底图受网络和提供方可用性影响；基础地图与名单可离线使用。
+### 直接在聊天里录入
 
-## 许可与参考
+```text
+使用 $graduation-map，先录入这几位虚构同学：
+陈一去甲大学，林二去乙大学，王三去丙大学。
+这是部分名单，其他人稍后补充。先保留待补位置，做一个地图草稿。
+```
 
-原创工作流、脚本和模板使用 [MIT License](LICENSE)。MapLibre GL JS 5.6.2 保留 BSD-3-Clause 及其依赖许可证；Natural Earth 地理数据为公有领域。详见 [第三方说明](THIRD_PARTY_NOTICES.md)。
+Agent 会分配稳定内部 ID。以后可以继续说“把 002 的学校改成丁大学”或“再加一位同学”；无需重做整份名单。同名或指代不明确时，只暂停有歧义的修改。
 
-技能目录组织和说明方式参考了 [Agent Skills 示例](https://github.com/anthropics/skills) 与 [OpenAI Codex 官方技能文档](https://developers.openai.com/codex/skills/)。地图实现使用 [MapLibre GL JS](https://github.com/maplibre/maplibre-gl-js)，可选街道图层来自 [OpenFreeMap](https://openfreemap.org/)。本项目与上述项目不存在官方隶属关系。
+### 现在没有真实数据
+
+```text
+使用 $graduation-map，我现在没有真实名单。
+请解释 TXT、Excel、对话与混合资料会怎样分析，并用明确标为虚构的
+少量记录演示成品。不要把虚构演练说成已经验证过我的真实数据。
+```
+
+## 会得到什么
+
+- **单文件 HTML**：现代浏览器可直接打开；内嵌地图引擎、地理轮廓、业务数据和交互，不需要应用服务器或数据库。
+- **可维护名单**：稳定人员 ID、姓名与学校/校区分离；统计、地图、名册、详情和导出读取同一份数据。
+- **校对说明**：来源覆盖范围、已收录数量、仍待核的字段，以及实际完成的验证。需要时另给可编辑 JSON。
+- **完整交互**：地区人数、学校点与姓名、搜索、国内/海外查看、母校连线、手机平移/缩放/双指旋转。
+
+母校有坐标时连线默认开启，可随时关闭。**街道底图自动尝试启用**：服务可访问时显示；离线、超时或瓦片失败时静默使用内置地图，网络恢复后自动重试。无额外联网提示，手动关闭后会尊重你的选择。
+
+| 功能 | 网络条件 |
+|---|---|
+| 查看内置地图、名单、搜索和交互 | 可离线 |
+| 查看构建时附加的原图 | 可离线 |
+| 街道、地名与建筑详情 | 自动按服务可用性加载 |
+| 首次安装、补查学校地址/坐标 | 按实际工具和资料需要联网 |
+
+姓名、历史就读校区与坐标分开确认。只知道地区也可保留；无坐标不伪造点位。只有汇总人数、没有个人名单时，Agent 可制作明确标注的汇总草稿，不能据此生成虚构的逐人名册。就业、复读等状态保留，超出当前升学模板时由 Agent 调整展示或附说明。
+
+## 看公开示例
+
+从仓库下载 [examples/demo.html](https://github.com/lirow/graduation-map-skill/blob/main/examples/demo.html) 后用浏览器打开；GitHub 文件预览不会执行 HTML。
+
+![桌面示例](docs/desktop.png)
+
+示例覆盖多人同校、海外、缺失坐标和待补资料。
+
+## Agent 如何工作
+
+技能入口：[SKILL.md](skills/graduation-map/SKILL.md)。
+读取规则见 [多来源读取与拆分](skills/graduation-map/references/input-sources.md)；
+合并规则见 [记录合并、冲突与交付](skills/graduation-map/references/reconciliation.md)；
+页面字段见 [数据规范](skills/graduation-map/references/data-schema.md)；
+验收见 [验证流程](skills/graduation-map/references/verification.md)。
+
+`scripts/` 中的构建、校验和姓名更正工具供 Agent 按需选用，帮助稳定装配页面。它们不负责理解任意 TXT/Excel/对话，也不是一条命令全自动完成语义分析的入口。用户的正常流程是“安装 skill → 给 Agent 资料 → 校对必要疑点 → 收到成品”。
+
+修改 HTML 前部的 `CLASS_INFO`、`ALMA_MATER`、`SCHOOLS`、`GRADUATES` 等集中数据后，保存并刷新会重新计算视图。也可直接让 Agent 根据更正重新生成。没有后台协同编辑或自动同步。
+
+## 维护者验证
+
+构建、工具/模型测试及浏览器检查见 [验证流程](skills/graduation-map/references/verification.md)。浏览器检查使用 Node.js 20+、Playwright 和 Chromium，覆盖离线文件、手机交互、触摸模拟及受控网络下的街道自动开启和静默回退。用户打开成品无需这些开发依赖；虚构分析演练不等于真实文件读取测试。
+
+## 分享与许可
+
+真实名单和附加原图会嵌入 HTML；分享前按需要脱敏，不要放入本公开仓库。公开 skill 不表示授权公开某个班级的数据。
+
+原创技能、模板与辅助工具采用 MIT；MapLibre GL JS 5.6.2 和 Natural Earth 等来源保留各自许可。来源及边界见公开仓库 `THIRD_PARTY_NOTICES.md`。内置轮廓是分布展示参考，不用于测绘，也不证明某个人的实际就读经历。
+
+> 维护约定：本地技能目录是维护源，GitHub 为分发副本。README 以 Agent 安装、资料输入和成品交付为主；原脚本使用细节见验证参考，勿恢复为主要入口。

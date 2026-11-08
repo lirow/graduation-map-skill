@@ -1,0 +1,302 @@
+{
+  "meta": {
+    "className": "2020届示例班",
+    "title": "示例班 · 毕业去向",
+    "year": 2020,
+    "homeCountry": "中国",
+    "rosterComplete": false,
+    "isDemo": true,
+    "description": "全部姓名、学校及关联均为虚构示例。"
+  },
+  "origin": {
+    "name": "示例中学",
+    "campus": "虚构母校",
+    "province": "陕西省",
+    "country": "中国",
+    "city": "演示地区",
+    "lng": 108.94,
+    "lat": 34.34,
+    "coordinateStatus": "demo",
+    "coordinateNote": "虚构母校参考点，不代表真实学校。"
+  },
+  "schools": [
+    {
+      "id": "demo-sc",
+      "name": "示例西南校区",
+      "province": "四川省",
+      "country": "中国",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": 104.06,
+      "lat": 30.67,
+      "coordinateStatus": "demo",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    },
+    {
+      "id": "demo-bj",
+      "name": "示例北方校区",
+      "province": "北京市",
+      "country": "中国",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": 116.4,
+      "lat": 39.9,
+      "coordinateStatus": "demo",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    },
+    {
+      "id": "demo-sh",
+      "name": "示例东部校区",
+      "province": "上海市",
+      "country": "中国",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": 121.47,
+      "lat": 31.23,
+      "coordinateStatus": "demo",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    },
+    {
+      "id": "demo-js",
+      "name": "示例江南校区",
+      "province": "江苏省",
+      "country": "中国",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": 118.78,
+      "lat": 32.04,
+      "coordinateStatus": "demo",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    },
+    {
+      "id": "demo-hb",
+      "name": "示例江汉校区",
+      "province": "湖北省",
+      "country": "中国",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": 114.3,
+      "lat": 30.59,
+      "coordinateStatus": "demo",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    },
+    {
+      "id": "demo-gd",
+      "name": "示例岭南校区",
+      "province": "广东省",
+      "country": "中国",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": 113.26,
+      "lat": 23.13,
+      "coordinateStatus": "demo",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    },
+    {
+      "id": "demo-uk",
+      "name": "示例海外校区 A",
+      "province": null,
+      "country": "英国",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": -0.12,
+      "lat": 51.5,
+      "coordinateStatus": "demo",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    },
+    {
+      "id": "demo-ca",
+      "name": "示例海外校区 B",
+      "province": null,
+      "country": "加拿大",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": -79.4,
+      "lat": 43.7,
+      "coordinateStatus": "demo",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    },
+    {
+      "id": "demo-pending",
+      "name": "示例待定位学校",
+      "province": "陕西省",
+      "country": "中国",
+      "city": "演示地区",
+      "campus": "虚构示例校区",
+      "lng": null,
+      "lat": null,
+      "coordinateStatus": "pending",
+      "coordinateNote": "虚构学校和去向，坐标仅用于交互演示。"
+    }
+  ],
+  "students": [
+    {
+      "id": "demo-01",
+      "name": "示例同学01",
+      "schoolId": "demo-sc",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-02",
+      "name": "示例同学02",
+      "schoolId": "demo-sc",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-03",
+      "name": "示例同学03",
+      "schoolId": "demo-sc",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-04",
+      "name": "示例同学04",
+      "schoolId": "demo-bj",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-05",
+      "name": "示例同学05",
+      "schoolId": "demo-bj",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-06",
+      "name": "示例同学06",
+      "schoolId": "demo-sh",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-07",
+      "name": "示例同学07",
+      "schoolId": "demo-sh",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-08",
+      "name": "示例同学08",
+      "schoolId": "demo-js",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-09",
+      "name": "示例同学09",
+      "schoolId": "demo-js",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-10",
+      "name": "示例同学10",
+      "schoolId": "demo-hb",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-11",
+      "name": "示例同学11",
+      "schoolId": "demo-hb",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-12",
+      "name": "示例同学12",
+      "schoolId": "demo-gd",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-13",
+      "name": "示例同学13",
+      "schoolId": "demo-gd",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-14",
+      "name": "示例同学14",
+      "schoolId": "demo-uk",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-15",
+      "name": "示例同学15",
+      "schoolId": "demo-ca",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-16",
+      "name": "示例同学16",
+      "schoolId": "demo-pending",
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    },
+    {
+      "id": "demo-17",
+      "name": "示例同学17",
+      "schoolId": null,
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。",
+      "province": "湖南省",
+      "country": "中国"
+    },
+    {
+      "id": "demo-18",
+      "name": "示例同学18",
+      "schoolId": null,
+      "nameStatus": "demo",
+      "status": "demo",
+      "reviewNote": "完全虚构的示例记录，不代表任何真实个人。"
+    }
+  ],
+  "regions": [
+    {
+      "name": "英国",
+      "shortName": "英国",
+      "centroid": [
+        -1.6,
+        53
+      ],
+      "isCountry": true,
+      "geoName": "英国"
+    },
+    {
+      "name": "加拿大",
+      "shortName": "加拿大",
+      "centroid": [
+        -100,
+        55
+      ],
+      "isCountry": true,
+      "geoName": "加拿大"
+    }
+  ]
+}

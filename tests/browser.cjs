@@ -7,7 +7,7 @@ const path = require('node:path');
 const {pathToFileURL} = require('node:url');
 
 const root = path.resolve(__dirname, '..');
-const htmlPath = path.resolve(process.env.DEMO_HTML || path.join(root, 'examples/demo.html'));
+const htmlPath = process.env.DEMO_HTML ? path.resolve(process.env.DEMO_HTML) : null;
 const screenshotDir = process.env.SCREENSHOT_DIR ? path.resolve(process.env.SCREENSHOT_DIR) : null;
 const results = [];
 const timeout = setTimeout(() => { console.error('Browser regression exceeded 60 seconds.'); process.exit(1); }, 60000);
@@ -93,10 +93,84 @@ async function touchChecks(page, context) {
   results.push({name:'CDP two-finger zoom and rotation',pass:true,before,expanded,contracted,rotated});
 }
 
+async function streetChecks(browser) {
+  const context = await browser.newContext({viewport:{width:1440,height:960},reducedMotion:'reduce'});
+  const page = await context.newPage();
+  const errors = [], tileRequests = [];
+  let available = true, stallSource = false, probes = 0;
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('https://tiles.openfreemap.org/**', async route => {
+    if(route.request().url() === 'https://tiles.openfreemap.org/planet') {
+      probes++;
+      if(stallSource)return;
+      if(!available)return route.fulfill({status:503,body:'Unavailable',headers:{'access-control-allow-origin':'*'}});
+      return route.fulfill({json:{tilejson:'3.0.0',tiles:['https://tiles.openfreemap.org/test/{z}/{x}/{y}.pbf'],minzoom:0,maxzoom:14},headers:{'access-control-allow-origin':'*'}});
+    }
+    tileRequests.push(route.request().url());
+    return route.fulfill({status:200,body:Buffer.alloc(0),headers:{'access-control-allow-origin':'*'}});
+  });
+  try {
+    await page.goto(pathToFileURL(htmlPath).href);await settle(page);
+    await page.waitForFunction(()=>classMap.state.streets);
+    assert.equal(await page.locator('#streets-toggle').isChecked(),true);
+    assert.equal(await page.evaluate(()=>classMap.map.getLayer('street-road') && classMap.map.getLayoutProperty('street-road','visibility')!=='none'),true);
+    assert.equal(await page.locator('#toast').isHidden(),true);
+    await page.evaluate(()=>classMap.map.jumpTo({center:[104.06,30.67],zoom:10}));
+    await settle(page);
+    await page.waitForFunction(()=>classMap.map.loaded()&&classMap.map.isSourceLoaded('streets'));
+    assert.ok(tileRequests.length>0,'Street zoom must request vector tiles.');
+    assert.ok(tileRequests.every(url=>/\/test\/\d+\/\d+\/\d+\.pbf$/.test(url)),'Map tile placeholders must expand to numeric coordinates.');
+
+    await context.setOffline(true);
+    await page.evaluate(()=>window.dispatchEvent(new Event('offline')));
+    await page.waitForFunction(()=>!classMap.state.streets);
+    assert.equal(await page.evaluate(()=>!!classMap.map.getSource('streets')),false);
+    assert.equal(await page.locator('#streets-toggle').isChecked(),false);
+    assert.equal(await page.locator('#toast').isHidden(),true);
+
+    await context.setOffline(false);
+    await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+    await page.waitForFunction(()=>classMap.state.streets);
+    await page.locator('#layers-button').click();
+    await page.locator('#streets-toggle').uncheck();
+    const before = probes;
+    await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+    assert.equal(await page.evaluate(()=>classMap.state.streets),false);
+    assert.equal(probes,before,'Automatic recovery must respect a manual opt-out.');
+
+    available=false;
+    const failedResponse=page.waitForResponse(response=>response.url()==='https://tiles.openfreemap.org/planet');
+    await page.locator('#streets-toggle').click();
+    await failedResponse;
+    await page.waitForFunction(()=>!document.getElementById('streets-toggle').checked);
+    assert.equal(await page.evaluate(()=>!!classMap.map.getSource('streets')),false);
+    assert.equal(await page.locator('#toast').isHidden(),true);
+    assert.doesNotMatch(await page.locator('#layer-note').innerText(),/不可用|正在加载|联网/);
+
+    available=true;
+    await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+    await page.waitForFunction(()=>classMap.state.streets);
+    await page.evaluate(()=>classMap.map.fire('error',{sourceId:'streets',error:new Error('Synthetic tile failure')}));
+    assert.equal(await page.evaluate(()=>classMap.state.streets),false);
+    assert.equal(await page.locator('#streets-toggle').isChecked(),false);
+    assert.equal(await page.locator('#toast').isHidden(),true);
+    assert.deepEqual(errors,[]);
+
+    stallSource=true;
+    const timeoutRequest=page.waitForEvent('requestfailed',{predicate:request=>request.url()==='https://tiles.openfreemap.org/planet',timeout:8000});
+    await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+    await timeoutRequest;
+    assert.equal(await page.evaluate(()=>classMap.state.streets),false);
+    assert.equal(await page.locator('#toast').isHidden(),true);
+    results.push({name:'automatic streets, silent offline/service/tile/timeout fallback, recovery and manual opt-out',pass:true});
+  } finally {await context.close();}
+}
+
 (async () => {
-  if (!fs.existsSync(htmlPath)) throw new Error('Build examples/demo.html first, or set DEMO_HTML to a generated HTML file.');
+  if (!htmlPath || !fs.existsSync(htmlPath)) throw new Error('Set DEMO_HTML to a generated fictional demonstration HTML.');
   const browser = await chromium.launch({headless:true, ...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {}), args:['--enable-webgl','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   try {
+    await streetChecks(browser);
     const desktop = await contextPage(browser,{width:1440,height:960},false);
     try {
       const {page} = desktop;

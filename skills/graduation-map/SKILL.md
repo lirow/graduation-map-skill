@@ -1,17 +1,21 @@
 ---
 name: graduation-map
-description: Use when turning a class graduation or college-admission list, a low-resolution destination image, or a corrected roster into a single-file interactive 3D map with province counts, school locations, and mobile gestures. Also applies to updating the roster or separating editable data from presentation. Not for tracking people's live locations.
+metadata:
+  tldr: "Agent 根据图片、文本、表格、对话或混合资料分析校对，交付可离线打开的毕业去向单页地图。"
+description: Use when a user wants a graduation or college-admission destination map from images, TXT, Excel/CSV, PDF/Word, chat messages, web tables, or mixed rosters, or wants to correct an existing class map. Not for tracking people's live locations.
 ---
 
 # Graduation map
 
-Create a shareable, editable class-destination HTML from a supplied roster or image. Work in the user's output directory; do not place private inputs inside this skill or its public example folder.
+You are the analyst and map author. Read the user's sources, resolve records and evidence, then deliver a shareable, editable HTML. The user may attach files, paste text, provide a permitted link or point to a local folder; do not require them to transcribe an image, prepare JSON, or run a pipeline. Choose available reading tools and use bundled helpers only where useful. Work in the user's output directory; keep private inputs outside this skill and public examples.
 
-## Choose the entry point
+## Read and reconcile the sources
 
-- **Image:** crop dense regions and transcribe each row with a stable `id`, original row label, optional `sourceRect`, and confidence. Read [image-to-data.md](references/image-to-data.md). Enlarging pixels does not resolve ambiguous characters.
-- **JSON / corrected names:** read [data-schema.md](references/data-schema.md). Apply authoritative corrections by `id`, preserving the original evidence. Recompute all counts.
-- **Existing page:** retain its established appearance and behavior unless asked to redesign. The bundled template is a starting point for new pages, not a mandate to replace another implementation.
+Read [input-sources.md](references/input-sources.md) for the supplied formats: image/OCR, TXT/Markdown, Excel/CSV, conversation, PDF/Word, authorized web/form exports, structured data and mixed folders. It defines splitting, sheet roles, provenance and tool fallbacks. For images also read [image-to-data.md](references/image-to-data.md); enlarging pixels does not resolve ambiguous characters.
+
+Read [reconciliation.md](references/reconciliation.md) before merging or applying corrections. Assign stable person IDs, distinguish detail from summaries, preserve same-name people, and resolve field-level evidence without double counting. Output a short source inventory, reconciled roster/counts and actionable uncertainties. Continue with confirmed records when the rest can remain unknown.
+
+Read [data-schema.md](references/data-schema.md) to map the analyzed records into the page contract. JSON is an agent working format, not a prerequisite for the user. For an existing page retain its established appearance and behavior unless asked to redesign.
 
 ## Prepare the data
 
@@ -23,7 +27,7 @@ Unknown coordinates are `null`. A known province may contribute to its count wit
 
 ## Build a single file
 
-Run the scripts with `--help` before adapting a command. Paths below are relative to this skill directory:
+Adapt the bundled template or generate a compatible page with your available tools. The following helpers are optional local validation/assembly tools, not readers for arbitrary source files or replacements for your analysis. Run `--help` before adapting a command; paths are relative to this skill:
 
 ```sh
 python3 scripts/validate_data.py --data /path/to/class.json
@@ -34,12 +38,18 @@ Add `--source-image /path/to/source.jpg` only when the user wants that image emb
 
 The resulting HTML puts editable `CLASS_INFO`, `ALMA_MATER`, `SCHOOLS`, `GRADUATES`, `REGION_CONFIG` and `MAP_CONFIG` before presentation code. Saving edits and refreshing rebuilds the view. Counts, labels, summaries, filters and JSON exports must all read the same objects.
 
+Street detail should attempt to enable automatically when its service is reachable. Use the actual source request, not only `navigator.onLine`; fail quietly to the embedded map on offline, timeout or source/tile failure, and retry on connectivity recovery. Do not add network prompts, failure banners or toasts. Keep a viewer's manual off choice until they re-enable it.
+
 ## Verify the result
 
 Read [verification.md](references/verification.md) for the focused checks: file opening offline, province/person accounting, null locations, labels, state changes, phone controls and touch gestures. School street detail is an optional online layer; distinguish that dependency from offline map functionality.
 
 Inspect the rendered result and report which checks actually ran. For data edits, verify that the displayed names and exported JSON match the user's corrections. Preserve unknown information and give the user a short list of missing campus/address details.
 
+With no real sources, explain the supported analysis and optionally use explicitly fictional examples. Never claim that TXT/Excel parsing, a roster or a real cohort was verified without the corresponding input.
+
 ## When publishing the workflow
 
 Publication of a reusable skill does not imply permission to publish the class roster. Use a fresh, allowlisted public package with synthetic data, preserve third-party notices, and inspect files and Git history for private inputs. Read [publishing.md](references/publishing.md) when publication is requested. Publishing requires the user's authorization; ordinary map creation does not authorize a public repository.
+
+> Maintenance: Source reading and reconciliation guidance lives in the linked references; scripts remain optional assembly aids. Do not restore a script-first or image-only entry point.

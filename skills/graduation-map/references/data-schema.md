@@ -1,6 +1,14 @@
+---
+type: 技能参考
+scope: skills-on-demand / 生活 / graduation-map
+updated: 2026-11-08
+tags: [skill, graduation-map]
+tldr: "graduation-map 的 data-schema 参考说明。"
+---
+
 # Data contract
 
-The builder accepts one UTF-8 JSON object. Required collections are `schools` and `students`; the map settings and region overrides can be omitted to use the bundled defaults. The exact minimal example is in the public repository's `examples/demo-data.json`.
+This is the page/optional builder contract after the agent analyzes the user's sources; users do not have to prepare JSON. The builder accepts one UTF-8 JSON object with required `meta`, `schools` and `students`; map settings and region overrides can use defaults. The runnable fictional example is in `../examples/demo-data.json`.
 
 | Object | Key fields | Meaning |
 |---|---|---|
@@ -12,6 +20,8 @@ The builder accepts one UTF-8 JSON object. Required collections are `schools` an
 | `map` | `showRoutes`, camera limits, zoom thresholds, glyph/tile URLs | Optional presentation/resource settings. `showRoutes` defaults to `true`; the layer-panel switch controls it during viewing. |
 
 Optional evidence fields include `coordinateNote`, `locationSource`, `identitySource`, `sourceLabel`, `sourceRect`, `reviewNote`, `nameCandidates` and `ocrName`.
+
+For non-image records, use a real `sourceLabel` such as `roster.txt lines 5-6`, `admissions.xlsx / Final / row 8` or `conversation message 4`; omit `sourceRect`. Keep detailed multi-source evidence/conflicts in the agent's working record or an accompanying review document; extra metadata is not automatically rendered by the template. Do not set `user_confirmed` merely because a file was read successfully.
 
 ## Location and confirmation
 
@@ -29,3 +39,5 @@ The generated variables are `CLASS_INFO`, `ALMA_MATER`, `SCHOOLS`, `GRADUATES`, 
 `schoolCount` counts referenced school/campus records. It is not a ranking and may differ from the number of distinct institutional names if campuses are split. `located` counts students with a known point; unlocated students remain in total counts and lists.
 
 Mother-school routes start enabled when the mother school has valid coordinates. Use `map.showRoutes: false` to start with them hidden. Missing mother-school coordinates disable the switch and do not create a route. Switching regions or returning to the overview preserves the viewer's current toggle choice.
+
+Street detail attempts to enable automatically using `streetsSourceUrl`. Offline or inaccessible source/tile data quietly leaves the embedded map active; connectivity recovery retries unless the viewer manually switched streets off. There is no network status toast or blocking prompt.

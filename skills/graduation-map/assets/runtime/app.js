@@ -62,7 +62,7 @@
   $('origin-note').textContent=data.origin?.coordinateNote||originStatus;
   $('origin-note').hidden=true;
   $('origin-name').onclick=()=>{$('origin-note').hidden=!$('origin-note').hidden;};
-  $('settings-description').textContent=`放大后可开启街道底图。母校：${originTitle}；${originStatus}连线表示录取去向，不是实际行程。`;
+  $('settings-description').textContent=`母校：${originTitle}；${originStatus}连线表示录取去向，不是实际行程。`;
   $('loading-caption').textContent=year?`正在展开 ${year} 年的夏天`:'正在展开我们的去向地图';
   $('about-kicker').textContent=[data.origin?.name,className].filter(Boolean).join(' · ');
   $('about-summary').textContent=`${data.meta.sourceTitle?'依据《'+data.meta.sourceTitle+'》整理。':''}${rosterSummary}国内 ${stats.provinceKnown} 人，海外 ${stats.overseas} 人${stats.unknown?'，去向待补充 '+stats.unknown+' 人':''}，涉及 ${stats.schoolCount} 所学校。`;
@@ -187,7 +187,7 @@
     showDetail(true);
     $('source-row-button').onclick=()=>window.openSourceReview?.(selected?.id);
     if(point)$('campus-zoom').onclick=()=>{
-      if(!state.streets){$('streets-toggle').checked=true;toggleStreets();}focusSchool(s,config.closeUpZoom);
+      focusSchool(s,config.closeUpZoom);
     };
     $('detail-content').querySelectorAll('[data-member]').forEach(b=>b.onclick=()=>{state.student=b.dataset.member;schoolDetail(s);renderList();scheduleLabels();});
   }
@@ -229,13 +229,32 @@
     });
     map.getSource('routes').setData(collection(paths));map.setLayoutProperty('routes','visibility',state.routes?'visible':'none');map.setLayoutProperty('origin','visibility',state.scope==='domestic'?'visible':'none');
   }
-  let streetsAdded=false, streetsFailed=false, streetsLoading=false;
+  let streetPreference=true, streetRequest=null, streetGeneration=0;
   const streetLayerIds=[];
-  function toggleStreets() {
-    state.streets=$('streets-toggle').checked;
-    if(state.streets&&!streetsAdded){
-      streetsLoading=true;
-      map.addSource('streets',{type:'vector',url:config.streetsSourceUrl,attribution:'<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · <a href="https://www.openmaptiles.org" target="_blank" rel="noopener">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'});
+  function stopStreets() {
+    streetGeneration++;
+    streetRequest?.abort();streetRequest=null;
+    state.streets=false;$('streets-toggle').checked=false;
+    for(const id of streetLayerIds.splice(0))if(map.getLayer(id))map.removeLayer(id);
+    if(map.getSource('streets'))map.removeSource('streets');
+    updateZoomUI();
+  }
+  async function syncStreets() {
+    stopStreets();
+    if(!state.ready||!streetPreference||navigator.onLine===false)return;
+    const generation=streetGeneration, controller=new AbortController();
+    streetRequest=controller;
+    const timer=setTimeout(()=>controller.abort(),5000);
+    try {
+      // Probe the actual TileJSON endpoint; browser connectivity alone is insufficient.
+      const response=await fetch(config.streetsSourceUrl,{signal:controller.signal,credentials:'omit'});
+      if(!response.ok)throw new Error('Street source unavailable');
+      const source=await response.json();
+      if(!Array.isArray(source.tiles)||!source.tiles.length||!source.tiles.every(url=>typeof url==='string'))throw new Error('Invalid street source');
+      if(generation!==streetGeneration||!streetPreference||navigator.onLine===false)return;
+      // URL resolution must retain MapLibre's {z}/{x}/{y} template tokens.
+      const tiles=source.tiles.map(url=>new URL(url,response.url||config.streetsSourceUrl).href.replace(/%7B/gi,'{').replace(/%7D/gi,'}'));
+      map.addSource('streets',{...source,type:'vector',tiles,attribution:'<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · <a href="https://www.openmaptiles.org" target="_blank" rel="noopener">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'});
       const layers=[
         {id:'street-green',type:'fill','source-layer':'landcover',minzoom:7,paint:{'fill-color':'#274c48','fill-opacity':.65}},
         {id:'street-landuse',type:'fill','source-layer':'landuse',minzoom:9,paint:{'fill-color':['match',['get','class'],'park','#325951','residential','#263e48','commercial','#32434a','#243d44'],'fill-opacity':.65}},
@@ -247,11 +266,17 @@
         {id:'street-places',type:'symbol','source-layer':'place',minzoom:8,filter:['in',['get','class'],['literal',['city','town','suburb','neighbourhood']]],layout:{'text-field':['coalesce',['get','name:zh'],['get','name:nonlatin'],['get','name'],''],'text-font':['Noto Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],8,11,14,13],'text-padding':20},paint:{'text-color':'#afc1b9','text-halo-color':'#15303a','text-halo-width':1.5}}
       ];
       for(const layer of layers){map.addLayer({...layer,source:'streets'},'province-edge');streetLayerIds.push(layer.id);}
-      streetsAdded=true;
+      state.streets=true;$('streets-toggle').checked=true;updateZoomUI();
+    } catch {
+      if(generation===streetGeneration)stopStreets();
+    } finally {
+      clearTimeout(timer);
+      if(streetRequest===controller)streetRequest=null;
     }
-    for(const id of streetLayerIds)map.setLayoutProperty(id,'visibility',state.streets?'visible':'none');
-    streetsFailed=false;updateZoomUI();
-    if(state.streets&&map.getZoom()<7)toast('已开启街道底图，放大到城市后显示');
+  }
+  function toggleStreets() {
+    streetPreference=$('streets-toggle').checked;
+    syncStreets();
   }
   let renderedMode='', labelElements=new Map(), scheduled=false;
   function scheduleLabels(){if(scheduled||!state.ready)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;renderLabels();});}
@@ -317,7 +342,7 @@
     $('map-level').textContent=z<config.regionLabelMaxZoom?'省份分布 · OVERVIEW':z<config.schoolZoom?'学校分布 · CAMPUSES':'校区位置 · CLOSE UP';
     $('view-title').textContent=z<config.regionLabelMaxZoom?'山海有相逢，来日皆可期。':state.school?schools.get(state.school).campus:'每一个坐标，都有熟悉的名字。';
     $('view-hint').textContent=mobile()?(z<config.regionLabelMaxZoom?'点地区看同学 · 双指缩放或旋转':'点学校看姓名 · 双指缩放或旋转'):(z<config.regionLabelMaxZoom?'滚轮缩放 · 拖动平移 · 右键拖动旋转 · 点地区查看同学':`引线固定于学校位置 · ${campusHint}`);
-    $('layer-note').innerHTML=z<7?`按同学名单自动统计<br>${data.meta.isDemo?'虚构示例数据':reviewCount?'部分姓名待核':`${stats.confirmedNames} 个姓名已校对`}`:!state.streets?`内置离线地图 · WGS84<br>${campusHint}`:streetsFailed?'街道底图暂不可用<br>学校点位与名单仍可查看':streetsLoading?'正在加载街道底图…<br>学校参考点可先行查看':`在线街道底图 · WGS84<br>${campusHint}`;
+    $('layer-note').innerHTML=z<7?`按同学名单自动统计<br>${data.meta.isDemo?'虚构示例数据':reviewCount?'部分姓名待核':`${stats.confirmedNames} 个姓名已校对`}`:`WGS84<br>${campusHint}`;
     $('legend').style.opacity=z>10?'0':'1';document.querySelector('.sea-name').hidden=z>config.regionLabelMaxZoom||state.scope==='overseas';
     $('zoom-in').disabled=z>=config.maxZoom-.1;$('zoom-out').disabled=z<=config.minZoom+.05;
   }
@@ -358,14 +383,15 @@
     map.on('click','school-points',e=>{e.originalEvent.stopPropagation();selectSchool(e.features[0].properties.id);});
     map.on('click','province-fill',e=>{if(map.getZoom()<config.regionLabelMaxZoom&&e.features.length)selectProvince(e.features[0].properties.name);});
     map.on('mouseenter','school-points',()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave','school-points',()=>map.getCanvas().style.cursor='');
-    resetView(false);updateZoomUI();$('loading').classList.add('done');setTimeout(()=>$('loading').hidden=true,550);
+    resetView(false);updateZoomUI();syncStreets();$('loading').classList.add('done');setTimeout(()=>$('loading').hidden=true,550);
   });
   map.on('render',scheduleLabels);
   map.on('zoom',updateZoomUI);
   map.on('pitch',syncPitchButton);
   map.on('rotate',()=>{$('compass-needle').style.transform=`rotate(${-map.getBearing()}deg)`;});
-  map.on('sourcedata',e=>{if(e.sourceId==='streets'&&e.isSourceLoaded){streetsLoading=false;updateZoomUI();}});
-  map.on('error',e=>{if(e.sourceId==='streets'||String(e.error?.message).includes('openfreemap.org')){streetsFailed=true;streetsLoading=false;updateZoomUI();}else console.error('Map error',e.error);});
+  map.on('error',e=>{if(e.sourceId==='streets'||String(e.error?.message).includes('openfreemap.org'))stopStreets();else console.error('Map error',e.error);});
+  window.addEventListener('offline',stopStreets);
+  window.addEventListener('online',syncStreets);
   map.on('webglcontextlost',()=>toast('图形上下文暂时中断，正在等待浏览器恢复'));
   let resizeTimer;
   window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{map.resize();if(state.school&&isLocated(schools.get(state.school)))focusSchool(schools.get(state.school),map.getZoom());else map.easeTo({padding:padding(),duration:0});scheduleLabels();},120);});
