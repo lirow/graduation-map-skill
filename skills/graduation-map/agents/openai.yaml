@@ -1,0 +1,6 @@
+interface:
+  display_name: "毕业去向地图"
+  short_description: "将录取去向图片或名单整理成可校对、可旋转缩放的单文件地图"
+  default_prompt: "使用 $graduation-map，把我的班级毕业去向资料整理成单文件交互地图，并保留姓名和校区的核对状态。"
+policy:
+  allow_implicit_invocation: true

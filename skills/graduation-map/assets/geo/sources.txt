@@ -1,0 +1,15 @@
+Natural Earth map data, retrieved 2026-11-08.
+License: Public domain. https://www.naturalearthdata.com/about/terms-of-use/
+Coordinate system: geographic longitude/latitude, WGS84 (EPSG:4326).
+Official CRS description: https://www.naturalearthdata.com/features/
+
+Province geometry source (10m):
+https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson
+Output china-provinces.json: 34 features. Mainland province-level units retained; Hong Kong districts, Taiwan counties/cities, and Macao units dissolved to region outlines. Source Paracel Islands geometries merged into Hainan. Geometry simplified at tolerance 0.008 degrees with topology preservation, rounded to 5 decimals. centroid is an interior representative label point, not a true area centroid. Name and shortName are Chinese display names. Natural Earth is a generalized cartographic reference, not authoritative cadastral/administrative surveying data.
+
+World background source (110m):
+https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson
+Output world.json: 176 features, Antarctica removed; invalid source geometries repaired with buffer(0); rounded to 5 decimals.
+
+Suggested attribution: Made with Natural Earth.
+These are general reference maps for an illustrative class destination visualization. School demo coordinates should be checked independently before real deployment.

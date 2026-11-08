@@ -1,0 +1,48 @@
+name: Verify skill and demo
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  data-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Python tools
+        run: python -m unittest discover -s tests -p test_tools.py -v
+      - name: Verify data model
+        run: node tests/model.cjs
+      - name: Build standalone synthetic demo
+        run: python skills/graduation-map/scripts/build.py --data examples/demo-data.json --output /tmp/graduation-demo.html
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build synthetic demo
+        run: python skills/graduation-map/scripts/build.py --data examples/demo-data.json --output /tmp/graduation-demo.html
+      - name: Verify offline desktop, mobile, and gestures
+        run: npm run test:browser
+        env:
+          DEMO_HTML: /tmp/graduation-demo.html

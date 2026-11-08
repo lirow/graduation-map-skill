@@ -1,0 +1,17 @@
+{
+  "name": "graduation-map-skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portable graduation-map skill and synthetic-data regression tests",
+  "scripts": {
+    "test:model": "node tests/model.cjs",
+    "test:browser": "node tests/browser.cjs",
+    "test": "npm run test:model && npm run test:browser"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
