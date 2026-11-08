@@ -39,13 +39,20 @@ async function screenshot(page, filename) {
   await page.screenshot({path:path.join(screenshotDir, filename)});
 }
 
-async function contextPage(browser, viewport, mobile) {
+async function contextPage(browser, viewport, mobile, override=null) {
   const context = await browser.newContext({viewport, isMobile:mobile, hasTouch:mobile, deviceScaleFactor:1, reducedMotion:'reduce', offline:true});
   const page = await context.newPage();
   const errors = [], remoteRequests = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {if (message.type() === 'error') errors.push(message.text());});
   page.on('request', request => {if (/^https?:/.test(request.url())) remoteRequests.push(request.url());});
+  if(override) await page.addInitScript(options=>{
+    Object.defineProperty(window,'CLASS_MAP_DATA',{configurable:true,set(data){
+      if(options.noOrigin)data.origin=null;
+      if(options.routesOff)data.map.showRoutes=false;
+      Object.defineProperty(window,'CLASS_MAP_DATA',{value:data,writable:true,configurable:true});
+    }});
+  },override);
   await page.goto(pathToFileURL(htmlPath).href, {waitUntil:'load', timeout:15000});
   await settle(page);
   return {context, page, errors, remoteRequests};
@@ -95,7 +102,20 @@ async function touchChecks(page, context) {
       const {page} = desktop;
       assert.equal(await page.locator('#total-count').textContent(),'18');
       assert.equal(await page.locator('#school-count').textContent(),'9');
+      assert.equal(await page.locator('#routes-toggle').isChecked(),true);
+      assert.equal(await page.evaluate(()=>classMap.map.getLayoutProperty('routes','visibility')),'visible');
+      assert.ok(await page.evaluate(()=>classMap.map.getSource('routes')._data.features.length>0));
       await screenshot(page,'desktop.png');
+      await page.locator('#layers-button').click();
+      await page.locator('#routes-toggle').uncheck();
+      assert.equal(await page.evaluate(()=>classMap.state.routes),false);
+      assert.equal(await page.evaluate(()=>classMap.map.getLayoutProperty('routes','visibility')),'none');
+      await page.evaluate(()=>{classMap.selectSchool('demo-sc');classMap.resetView(false);});await settle(page);
+      assert.equal(await page.locator('#routes-toggle').isChecked(),false);
+      assert.equal(await page.evaluate(()=>classMap.map.getLayoutProperty('routes','visibility')),'none');
+      await page.locator('#routes-toggle').check();
+      assert.equal(await page.evaluate(()=>classMap.map.getLayoutProperty('routes','visibility')),'visible');
+      await page.locator('#layers-button').click();
       await page.locator('#search').fill('示例同学14');
       assert.equal(await page.locator('#list [data-student]').count(),1);
       await page.locator('#clear-search').click();
@@ -116,6 +136,18 @@ async function touchChecks(page, context) {
       assert.deepEqual(desktop.errors,[]);assert.deepEqual(desktop.remoteRequests,[]);
       results.push({name:'desktop offline search, grouped members, detail, home, source empty state',pass:true});
     } finally {await desktop.context.close();}
+
+    for(const override of [{noOrigin:true},{routesOff:true}]){
+      const variant=await contextPage(browser,{width:1440,height:960},false,override);
+      try{
+        assert.equal(await variant.page.locator('#routes-toggle').isChecked(),false);
+        assert.equal(await variant.page.locator('#routes-toggle').isDisabled(),!!override.noOrigin);
+        assert.equal(await variant.page.evaluate(()=>classMap.state.routes),false);
+        assert.equal(await variant.page.evaluate(()=>classMap.map.getLayoutProperty('routes','visibility')),'none');
+        assert.deepEqual(variant.errors,[]);
+      }finally{await variant.context.close();}
+    }
+    results.push({name:'routes default on, reversible switch, explicit opt-out and missing origin',pass:true});
 
     const phone = await contextPage(browser,{width:320,height:568},true);
     try {

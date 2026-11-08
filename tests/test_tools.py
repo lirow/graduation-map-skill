@@ -27,6 +27,15 @@ def sample():
 
 
 class ToolTests(unittest.TestCase):
+    def test_route_default_is_configurable_boolean(self):
+        from data_tools import normalized_data, DataError
+        self.assertIs(normalized_data(sample())["map"].get("showRoutes"), True)
+        value=sample(); value["map"]={"showRoutes":False}
+        self.assertIs(normalized_data(value)["map"]["showRoutes"], False)
+        for invalid in ["false", 1, None]:
+            value["map"]["showRoutes"]=invalid
+            with self.assertRaises(DataError): normalized_data(value)
+
     def run_cli(self, name, *args, cwd=None):
         return subprocess.run([sys.executable, str(SCRIPTS / name), *map(str, args)], cwd=cwd, capture_output=True, text=True)
 

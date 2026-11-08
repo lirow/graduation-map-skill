@@ -6,6 +6,7 @@ import math
 
 
 DEFAULT_MAP = {
+    "showRoutes": True,
     "defaultCenter": [113.5, 32], "defaultZoom": 4.4, "minZoom": 1.4,
     "maxZoom": 17.8, "defaultPitch": 37, "defaultBearing": -9,
     "overviewMaxZoom": 5.5, "provinceDetailZoom": 8.7, "schoolZoom": 11.3,
@@ -153,6 +154,8 @@ def validate_data(data):
             validate_coordinates({"lng": center[0], "lat": center[1]}, label)
     config = data.get("map", {})
     _object(config, "map")
+    if "showRoutes" in config and not isinstance(config["showRoutes"], bool):
+        raise DataError("map.showRoutes must be true or false.")
     for key, value in config.items():
         if key in DEFAULT_MAP and _number(DEFAULT_MAP[key]) and not _number(value):
             raise DataError(f"map.{key} must be a finite number.")

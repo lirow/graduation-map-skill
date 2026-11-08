@@ -18,7 +18,7 @@
   const readableName = s => s.name || `姓名待补充 · ${s.sourceLabel || s.id}`;
   const nameLabel = s => `${readableName(s)}${s.nameStatus==='needs_review'?'〔待核〕':''}`;
   const reviewCount = stats.needsReview;
-  const state = {tab:'provinces', province:null, unknownOnly:false, query:'', school:null, student:null, labels:true, routes:false, streets:false, ready:false,scope:'domestic'};
+  const state = {tab:'provinces', province:null, unknownOnly:false, query:'', school:null, student:null, labels:true, routes:config.showRoutes !== false && isLocated(data.origin), streets:false, ready:false,scope:'domestic'};
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const landscapeCompact = () => innerWidth > innerHeight && innerWidth <= 1024 && innerHeight <= 500;
   const mobile = () => innerWidth <= 760 || landscapeCompact();
@@ -57,6 +57,7 @@
   $('overseas-button').disabled=!stats.overseas;
   $('mobile-list-button').querySelector('small').textContent=`${stats.total} 位同学`;
   $('routes-toggle').disabled=!hasOriginPoint();
+  $('routes-toggle').checked=state.routes;
   $('origin-name').textContent=originTitle;
   $('origin-note').textContent=data.origin?.coordinateNote||originStatus;
   $('origin-note').hidden=true;

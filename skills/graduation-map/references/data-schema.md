@@ -9,7 +9,7 @@ The builder accepts one UTF-8 JSON object. Required collections are `schools` an
 | `schools[]` | unique `id`, `name`, `country`, `province`, `city`, `campus`, `lng`, `lat` | One destination location per record. A second campus gets its own ID. |
 | `students[]` | unique `id`, `name`, `schoolId`, `nameStatus` | A person refers to a school ID; use `schoolId: null` when unresolved. |
 | `regions[]` | `name`, `shortName`, `centroid`, `isCountry`, `geoName` | Optional label anchors/geometry aliases, especially for foreign countries. |
-| `map` | camera limits, zoom thresholds, glyph/tile URLs | Optional presentation/resource settings. |
+| `map` | `showRoutes`, camera limits, zoom thresholds, glyph/tile URLs | Optional presentation/resource settings. `showRoutes` defaults to `true`; the layer-panel switch controls it during viewing. |
 
 Optional evidence fields include `coordinateNote`, `locationSource`, `identitySource`, `sourceLabel`, `sourceRect`, `reviewNote`, `nameCandidates` and `ocrName`.
 
@@ -27,3 +27,5 @@ Optional evidence fields include `coordinateNote`, `locationSource`, `identitySo
 The generated variables are `CLASS_INFO`, `ALMA_MATER`, `SCHOOLS`, `GRADUATES`, `REGION_CONFIG` and `MAP_CONFIG`, combined by reference in `CLASS_MAP_DATA`. The pure data model builds indexes and counts without mutating them. Editing and refreshing the HTML updates the presentation; it is not a live database.
 
 `schoolCount` counts referenced school/campus records. It is not a ranking and may differ from the number of distinct institutional names if campuses are split. `located` counts students with a known point; unlocated students remain in total counts and lists.
+
+Mother-school routes start enabled when the mother school has valid coordinates. Use `map.showRoutes: false` to start with them hidden. Missing mother-school coordinates disable the switch and do not create a route. Switching regions or returning to the overview preserves the viewer's current toggle choice.
