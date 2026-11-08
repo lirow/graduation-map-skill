@@ -42,9 +42,15 @@ async function screenshot(page, filename) {
 async function contextPage(browser, viewport, mobile, override=null) {
   const context = await browser.newContext({viewport, isMobile:mobile, hasTouch:mobile, deviceScaleFactor:1, reducedMotion:'reduce', offline:true});
   const page = await context.newPage();
-  const errors = [], remoteRequests = [];
+  const errors = [], remoteRequests = [], offlineFailures = [];
+  // Connectivity flags can stay true when the transport is offline.
+  await page.addInitScript(()=>Object.defineProperty(navigator,'onLine',{get:()=>true,configurable:true}));
   page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => {if (message.type() === 'error') errors.push(message.text());});
+  page.on('console', message => {
+    if(message.type()!=='error')return;
+    if(message.text()==='Failed to load resource: net::ERR_INTERNET_DISCONNECTED')offlineFailures.push(message.location().url);
+    else errors.push(message.text());
+  });
   page.on('request', request => {if (/^https?:/.test(request.url())) remoteRequests.push(request.url());});
   if(override) await page.addInitScript(options=>{
     Object.defineProperty(window,'CLASS_MAP_DATA',{configurable:true,set(data){
@@ -55,7 +61,18 @@ async function contextPage(browser, viewport, mobile, override=null) {
   },override);
   await page.goto(pathToFileURL(htmlPath).href, {waitUntil:'load', timeout:15000});
   await settle(page);
-  return {context, page, errors, remoteRequests};
+  await page.waitForLoadState('networkidle',{timeout:5000});
+  return {context, page, errors, remoteRequests, offlineFailures};
+}
+
+async function offlineChecks(result) {
+  const source=await result.page.evaluate(()=>classMap.data.map.streetsSourceUrl);
+  assert.deepEqual(result.errors,[]);
+  assert.ok(result.remoteRequests.length>0,'Offline test must exercise an unreliable online flag.');
+  for(const url of [...result.remoteRequests,...result.offlineFailures])assert.equal(url,source,'Only the optional street metadata probe may fail offline.');
+  assert.equal(await result.page.evaluate(()=>classMap.state.streets),false);
+  assert.equal(await result.page.locator('#streets-toggle').isChecked(),false);
+  assert.equal(await result.page.locator('#toast').isHidden(),true);
 }
 
 async function touchChecks(page, context) {
@@ -207,7 +224,7 @@ async function streetChecks(browser) {
       await page.waitForFunction(() => document.querySelector('#source-review .sr-image-error')?.textContent.includes('原图'));
       assert.match(await page.locator('#source-review .sr-image-error').textContent(),/未附加|没有找到/);
       await page.keyboard.press('Escape');
-      assert.deepEqual(desktop.errors,[]);assert.deepEqual(desktop.remoteRequests,[]);
+      await offlineChecks(desktop);
       results.push({name:'desktop offline search, grouped members, detail, home, source empty state',pass:true});
     } finally {await desktop.context.close();}
 
@@ -218,7 +235,7 @@ async function streetChecks(browser) {
         assert.equal(await variant.page.locator('#routes-toggle').isDisabled(),!!override.noOrigin);
         assert.equal(await variant.page.evaluate(()=>classMap.state.routes),false);
         assert.equal(await variant.page.evaluate(()=>classMap.map.getLayoutProperty('routes','visibility')),'none');
-        assert.deepEqual(variant.errors,[]);
+        await offlineChecks(variant);
       }finally{await variant.context.close();}
     }
     results.push({name:'routes default on, reversible switch, explicit opt-out and missing origin',pass:true});
@@ -245,7 +262,7 @@ async function streetChecks(browser) {
       await page.setViewportSize({width:390,height:844});await page.waitForTimeout(200);await page.evaluate(() => classMap.resetView(false));await settle(page);
       await screenshot(page,'mobile.png');
       await touchChecks(page,phone.context);
-      assert.deepEqual(phone.errors,[]);assert.deepEqual(phone.remoteRequests,[]);
+      await offlineChecks(phone);
       results.push({name:'small portrait and landscape controls, drawer, visible point, offline resources',pass:true});
     } finally {await phone.context.close();}
   } finally {await browser.close();clearTimeout(timeout);}
