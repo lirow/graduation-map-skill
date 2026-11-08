@@ -46,3 +46,7 @@ jobs:
         run: npm run test:browser
         env:
           DEMO_HTML: /tmp/graduation-demo.html
+      - name: Verify independent 2D recovery and mobile graphics budget
+        run: npm run test:compatibility
+        env:
+          DEMO_HTML: /tmp/graduation-demo.html

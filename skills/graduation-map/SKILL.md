@@ -40,6 +40,8 @@ The resulting HTML puts editable `CLASS_INFO`, `ALMA_MATER`, `SCHOOLS`, `GRADUAT
 
 Street detail should attempt to enable automatically when its service is reachable. Use the actual source request, not only `navigator.onLine`; fail quietly to the embedded map on offline, timeout or source/tile failure, and retry on connectivity recovery. Do not add network prompts, failure banners or toasts. Keep a viewer's manual off choice until they re-enable it.
 
+Keep the embedded Leaflet 2D renderer as an independent fallback when WebGL, workers or the 3D engine fail. Limit mobile rendering cost, automatically recover from slow startup/context loss, and clear obsolete error overlays after successful initialization. Read [compatibility.md](references/compatibility.md) for the capability-based policy and the limits of Xiaomi-related evidence.
+
 ## Verify the result
 
 Read [verification.md](references/verification.md) for the focused checks: file opening offline, province/person accounting, null locations, labels, state changes, phone controls and touch gestures. School street detail is an optional online layer; distinguish that dependency from offline map functionality.

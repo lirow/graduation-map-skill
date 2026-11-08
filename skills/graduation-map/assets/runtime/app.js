@@ -18,10 +18,11 @@
   const readableName = s => s.name || `姓名待补充 · ${s.sourceLabel || s.id}`;
   const nameLabel = s => `${readableName(s)}${s.nameStatus==='needs_review'?'〔待核〕':''}`;
   const reviewCount = stats.needsReview;
-  const state = {tab:'provinces', province:null, unknownOnly:false, query:'', school:null, student:null, labels:true, routes:config.showRoutes !== false && isLocated(data.origin), streets:false, ready:false,scope:'domestic'};
+  const state = {tab:'provinces', province:null, unknownOnly:false, query:'', school:null, student:null, labels:true, routes:config.showRoutes !== false && isLocated(data.origin), streets:false, ready:false,scope:'domestic',renderer:'webgl'};
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const landscapeCompact = () => innerWidth > innerHeight && innerWidth <= 1024 && innerHeight <= 500;
   const mobile = () => innerWidth <= 760 || landscapeCompact();
+  const compactDevice = mobile() || matchMedia('(pointer:coarse)').matches;
   const hasOriginPoint = () => isLocated(data.origin);
   const duration = n => reduceMotion ? 0 : n;
   const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -77,11 +78,11 @@
   for (let lng=65;lng<=150;lng+=5) grid.push(feat({type:'LineString',coordinates:[[lng,10],[lng,58]]}));
   for (let lat=10;lat<=55;lat+=5) grid.push(feat({type:'LineString',coordinates:[[65,lat],[150,lat]]}));
   let map;
-  let mapLoadTimer;
+  let mapLoadTimer, initialized=false;
   function fail(message) { clearTimeout(mapLoadTimer); $('loading').classList.add('done'); $('fatal-message').textContent = message; $('fatal').hidden = false; }
-  try {
-    map = new maplibregl.Map({container:'map', attributionControl:false, center:config.defaultCenter, zoom:config.defaultZoom, minZoom:config.minZoom, maxZoom:config.maxZoom, pitch:config.defaultPitch, maxPitch:65, bearing:config.defaultBearing, renderWorldCopies:false,
-      canvasContextAttributes:{antialias:true}, style:{version:8,glyphs:config.glyphsUrl, sources:{
+  const mapOptions = {container:'map', attributionControl:false, center:config.defaultCenter, zoom:config.defaultZoom, minZoom:config.minZoom, maxZoom:config.maxZoom, pitch:compactDevice?Math.min(25,config.defaultPitch):config.defaultPitch, maxPitch:65, bearing:config.defaultBearing, renderWorldCopies:false,
+      pixelRatio:Math.min(devicePixelRatio||1,compactDevice?1.5:2),maxCanvasSize:compactDevice?[2560,2560]:[4096,4096],
+      canvasContextAttributes:{antialias:!compactDevice}, style:{version:8,glyphs:config.glyphsUrl, sources:{
         world:{type:'geojson',data:world}, provinces:{type:'geojson',data:provinces}, grid:{type:'geojson',data:collection(grid)}
       }, layers:[
         {id:'ocean',type:'background',paint:{'background-color':'#0c202b'}},
@@ -93,13 +94,40 @@
         {id:'province-volume',type:'fill-extrusion',source:'provinces',maxzoom:7.2,paint:{'fill-extrusion-color':['case',['>', ['get','count'],0],['interpolate',['linear'],['get','count'],1,'#3a696b',5,'#6b9785'],'#203d49'],'fill-extrusion-height':['case',['>', ['get','count'],0],15000,4500],'fill-extrusion-base':0,'fill-extrusion-opacity':.92}},
         {id:'province-edge',type:'line',source:'provinces',paint:{'line-color':['case',['>', ['get','count'],0],'#a6c7b4','#53727a'],'line-width':['interpolate',['linear'],['zoom'],3,.5,7,1,12,1.5],'line-opacity':['interpolate',['linear'],['zoom'],6,.75,10,.35]}},
         {id:'province-selected',type:'line',source:'provinces',filter:['==',['get','name'],''],paint:{'line-color':'#e6bc83','line-width':2,'line-opacity':.9}}
-      ]}
-    });
-  } catch (e) { fail('当前浏览器无法启动 3D 地图。请使用最新版 Chrome、Edge 或 Safari，并检查浏览器的图形加速设置。'); console.error(e); return; }
-  mapLoadTimer = setTimeout(() => { if (!state.ready) fail('地图加载超时。请尝试重新打开文件，或使用支持 WebGL 的浏览器。'); }, 20000);
-  map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'Made with Natural Earth'}), 'bottom-right');
-  map.addControl(new maplibregl.ScaleControl({maxWidth:90,unit:'metric'}), 'bottom-left');
-  map.getCanvas().setAttribute('aria-label','班级地图。方向键平移，加减键缩放；也可使用右侧地图按钮。');
+      ].filter(layer=>!compactDevice||layer.id!=='province-volume')}
+    };
+  try {
+    if(typeof Worker!=='function')throw new Error('Workers unavailable');
+    map = new maplibregl.Map(mapOptions);
+  } catch {
+    state.renderer='2d';
+    try { map=window.createOfflineMap(mapOptions); }
+    catch { fail('地图暂时无法启动，请重新打开文件。');return; }
+  }
+  function configureMap() {
+    const fallback=state.renderer==='2d';
+    for(const id of ['pitch-button','rotate-button','north-button'])$(id).disabled=fallback;
+    $('streets-toggle').disabled=fallback;
+    if(!fallback){
+      map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'Made with Natural Earth'}), 'bottom-right');
+      map.addControl(new maplibregl.ScaleControl({maxWidth:90,unit:'metric'}), 'bottom-left');
+    }
+    map.getCanvas().setAttribute('aria-label','班级地图');
+    syncPitchButton();
+  }
+  function activateFallback(reason) {
+    if(state.renderer==='2d')return;
+    clearTimeout(mapLoadTimer);
+    stopStreets();
+    state.ready=false;state.renderer='2d';state.fallbackReason=reason;
+    const previous=map;
+    try {previous.remove();}catch {}
+    try {
+      map=window.createOfflineMap(mapOptions);
+      configureMap();bindMapEvents();
+    } catch {fail('地图暂时无法启动，请重新打开文件。');}
+  }
+  if(state.renderer==='webgl')mapLoadTimer=setTimeout(()=>{if(!state.ready)activateFallback('initialization-timeout');},8000);
   function visibleSchools() { return activeSchools.filter(s => (!state.province ? isOverseas(regionOf(s))===(state.scope==='overseas') : regionOf(s)===state.province) && (!state.unknownOnly || (schoolStudents.get(s.id)||[]).some(m=>m.nameStatus==='needs_review'))); }
   function overviewPoints(scope=state.scope) { return [...counts.keys()].filter(r=>isOverseas(r)===(scope==='overseas')).map(regionCenter).filter(Boolean); }
   function schoolGeo() { return collection(visibleSchools().map(s => feat({type:'Point',coordinates:[s.lng,s.lat]},{id:s.id,count:schoolStudents.get(s.id).length}))); }
@@ -108,7 +136,10 @@
     if (mobile()) return {top:innerHeight<700?195:235,bottom:innerHeight<700?150:190,left:35,right:78};
     return {top:150,bottom:155,left:innerWidth>1500?430:innerWidth<=1000?330:390,right:125};
   }
-  function boundsOf(points) {const bounds=new maplibregl.LngLatBounds();for(const p of points)bounds.extend(p);return bounds;}
+  function boundsOf(points) {
+    const bounds=L.latLngBounds(points.map(([lng,lat])=>[lat,lng]));
+    return [[bounds.getWest(),bounds.getSouth()],[bounds.getEast(),bounds.getNorth()]];
+  }
   function fit(points, maxZoom=6, animate=true) {
     if (!points.length) return;
     // cameraForBounds includes existing camera padding: clear it before fitting a new viewport.
@@ -121,7 +152,7 @@
   }
   function resetView(animate=true) {
     state.province=null; state.school=null; state.student=null;state.unknownOnly=false; state.query='';state.tab='provinces';state.scope='domestic'; $('search').value='';$('clear-search').hidden=true; showDetail(false);
-    if (state.ready) {map.setFilter('province-selected',['==',['get','name'],'']); refreshSources();map.easeTo({bearing:config.defaultBearing,pitch:config.defaultPitch,duration:0});fit(overviewPoints(),config.overviewMaxZoom,animate);}
+    if (state.ready) {map.setFilter('province-selected',['==',['get','name'],'']); refreshSources();map.easeTo({bearing:config.defaultBearing,pitch:mapOptions.pitch,duration:0});fit(overviewPoints(),config.overviewMaxZoom,animate);}
     renderList(); updateBreadcrumb(); syncPitchButton(); closeMobileList();
   }
   function updateBreadcrumb() {
@@ -241,7 +272,7 @@
   }
   async function syncStreets() {
     stopStreets();
-    if(!state.ready||!streetPreference||navigator.onLine===false)return;
+    if(!state.ready||state.renderer==='2d'||!streetPreference||navigator.onLine===false)return;
     const generation=streetGeneration, controller=new AbortController();
     streetRequest=controller;
     const timer=setTimeout(()=>controller.abort(),5000);
@@ -260,7 +291,7 @@
         {id:'street-landuse',type:'fill','source-layer':'landuse',minzoom:9,paint:{'fill-color':['match',['get','class'],'park','#325951','residential','#263e48','commercial','#32434a','#243d44'],'fill-opacity':.65}},
         {id:'street-water',type:'fill','source-layer':'water',minzoom:7,paint:{'fill-color':'#0c2836'}},
         {id:'street-river',type:'line','source-layer':'waterway',minzoom:9,paint:{'line-color':'#284f62','line-width':2}},
-        {id:'street-building',type:'fill-extrusion','source-layer':'building',minzoom:13,paint:{'fill-extrusion-color':'#476168','fill-extrusion-height':['coalesce',['get','render_height'],8],'fill-extrusion-base':['coalesce',['get','render_min_height'],0],'fill-extrusion-opacity':.8}},
+        {id:'street-building',type:compactDevice?'fill':'fill-extrusion','source-layer':'building',minzoom:13,paint:compactDevice?{'fill-color':'#476168','fill-opacity':.8}:{'fill-extrusion-color':'#476168','fill-extrusion-height':['coalesce',['get','render_height'],8],'fill-extrusion-base':['coalesce',['get','render_min_height'],0],'fill-extrusion-opacity':.8}},
         {id:'street-road',type:'line','source-layer':'transportation',minzoom:7,filter:['==',['geometry-type'],'LineString'],layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['match',['get','class'],['motorway','trunk'],'#a59571',['primary','secondary'],'#7b887b','#527078'],'line-width':['interpolate',['exponential',1.4],['zoom'],7,.4,12,1.2,15,3,18,12],'line-opacity':.85}},
         {id:'street-road-names',type:'symbol','source-layer':'transportation_name',minzoom:12,layout:{'symbol-placement':'line','symbol-spacing':350,'text-field':['coalesce',['get','name:zh'],['get','name:nonlatin'],['get','name'],''],'text-font':['Noto Sans Regular'],'text-size':11,'text-max-angle':30,'text-pitch-alignment':'viewport'},paint:{'text-color':'#acbcb8','text-halo-color':'#16303a','text-halo-width':1.5}},
         {id:'street-places',type:'symbol','source-layer':'place',minzoom:8,filter:['in',['get','class'],['literal',['city','town','suburb','neighbourhood']]],layout:{'text-field':['coalesce',['get','name:zh'],['get','name:nonlatin'],['get','name'],''],'text-font':['Noto Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],8,11,14,13],'text-padding':20},paint:{'text-color':'#afc1b9','text-halo-color':'#15303a','text-halo-width':1.5}}
@@ -342,6 +373,7 @@
     $('map-level').textContent=z<config.regionLabelMaxZoom?'省份分布 · OVERVIEW':z<config.schoolZoom?'学校分布 · CAMPUSES':'校区位置 · CLOSE UP';
     $('view-title').textContent=z<config.regionLabelMaxZoom?'山海有相逢，来日皆可期。':state.school?schools.get(state.school).campus:'每一个坐标，都有熟悉的名字。';
     $('view-hint').textContent=mobile()?(z<config.regionLabelMaxZoom?'点地区看同学 · 双指缩放或旋转':'点学校看姓名 · 双指缩放或旋转'):(z<config.regionLabelMaxZoom?'滚轮缩放 · 拖动平移 · 右键拖动旋转 · 点地区查看同学':`引线固定于学校位置 · ${campusHint}`);
+    if(state.renderer==='2d')$('view-hint').textContent=mobile()?'点地区或学校查看 · 双指缩放':'滚轮缩放 · 拖动平移 · 点地区或学校查看';
     $('layer-note').innerHTML=z<7?`按同学名单自动统计<br>${data.meta.isDemo?'虚构示例数据':reviewCount?'部分姓名待核':`${stats.confirmedNames} 个姓名已校对`}`:`WGS84<br>${campusHint}`;
     $('legend').style.opacity=z>10?'0':'1';document.querySelector('.sea-name').hidden=z>config.regionLabelMaxZoom||state.scope==='overseas';
     $('zoom-in').disabled=z>=config.maxZoom-.1;$('zoom-out').disabled=z<=config.minZoom+.05;
@@ -372,8 +404,11 @@
   $('about').onclick=e=>{if(e.target===$('about')){const r=$('about').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('about').close();}};
   $('export-data').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${className}-页面数据.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMobileList();$('map-settings').hidden=true;$('layers-button').setAttribute('aria-expanded','false');if(!$('detail').hidden)closeDetail();}});
+  function bindMapEvents() {
+  const instance=map;
   map.on('load',()=>{
-    clearTimeout(mapLoadTimer);state.ready=true;
+    if(map!==instance)return;
+    clearTimeout(mapLoadTimer);state.ready=true;$('fatal').hidden=true;
     map.addSource('schools',{type:'geojson',data:schoolGeo()});map.addSource('routes',{type:'geojson',data:collection([])});map.addSource('origin',{type:'geojson',data:hasOriginPoint()?feat({type:'Point',coordinates:[data.origin.lng,data.origin.lat]}):collection([])});
     map.addLayer({id:'routes',type:'line',source:'routes',layout:{visibility:'none','line-cap':'round','line-join':'round'},paint:{'line-color':'#e6bc83','line-width':['interpolate',['linear'],['zoom'],4,1,10,2],'line-opacity':.55}});
     map.addLayer({id:'origin',type:'circle',source:'origin',layout:{visibility:'none'},paint:{'circle-radius':5,'circle-color':'#e6bc83','circle-stroke-color':'#e6bc8350','circle-stroke-width':5}});
@@ -383,7 +418,13 @@
     map.on('click','school-points',e=>{e.originalEvent.stopPropagation();selectSchool(e.features[0].properties.id);});
     map.on('click','province-fill',e=>{if(map.getZoom()<config.regionLabelMaxZoom&&e.features.length)selectProvince(e.features[0].properties.name);});
     map.on('mouseenter','school-points',()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave','school-points',()=>map.getCanvas().style.cursor='');
-    resetView(false);updateZoomUI();syncStreets();$('loading').classList.add('done');setTimeout(()=>$('loading').hidden=true,550);
+    if(!initialized){resetView(false);initialized=true;}
+    else {
+      refreshSources();renderList();updateBreadcrumb();
+      if(state.school&&isLocated(schools.get(state.school)))focusSchool(schools.get(state.school));
+      else fit(state.province?visibleSchools().map(s=>[s.lng,s.lat]):overviewPoints(),state.province?config.provinceDetailZoom:config.overviewMaxZoom,false);
+    }
+    updateZoomUI();syncStreets();syncPitchButton();$('loading').classList.add('done');setTimeout(()=>$('loading').hidden=true,550);
   });
   map.on('render',scheduleLabels);
   map.on('zoom',updateZoomUI);
@@ -392,10 +433,11 @@
   map.on('error',e=>{if(e.sourceId==='streets'||String(e.error?.message).includes('openfreemap.org'))stopStreets();else console.error('Map error',e.error);});
   window.addEventListener('offline',stopStreets);
   window.addEventListener('online',syncStreets);
-  map.on('webglcontextlost',()=>toast('图形上下文暂时中断，正在等待浏览器恢复'));
+  map.on('webglcontextlost',()=>{if(map===instance)activateFallback('context-lost');});
+  }
   let resizeTimer;
   window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{map.resize();if(state.school&&isLocated(schools.get(state.school)))focusSchool(schools.get(state.school),map.getZoom());else map.easeTo({padding:padding(),duration:0});scheduleLabels();},120);});
-  renderList();
+  renderList();configureMap();bindMapEvents();
   // Read-only inspection surface for local verification; application data stays in the JSON block above.
-  window.classMap={map,data,model,state,counts,schoolStudents,stats,selectProvince,selectSchool,selectStudent,resetView};
+  window.classMap={get map(){return map;},data,model,state,counts,schoolStudents,stats,selectProvince,selectSchool,selectStudent,resetView};
 })();

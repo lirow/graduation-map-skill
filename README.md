@@ -96,6 +96,8 @@ Agent 会分配稳定内部 ID。以后可以继续说“把 002 的学校改成
 
 母校有坐标时连线默认开启，可随时关闭。**街道底图自动尝试启用**：服务可访问时显示；离线、超时或瓦片失败时静默使用内置地图，网络恢复后自动重试。无额外联网提示，手动关闭后会尊重你的选择。
 
+**手机兼容**：3D 无法启动、启动超时或图形上下文丢失时，自动切换内嵌的二维地图；搜索、名册、地区/学校、连线和导出继续可用。二维兼容模式不依赖 WebGL、Worker 或在线底图，停用旋转与矢量街道。正常手机仍可使用经过减负的 3D 视图，不按品牌强制降级。
+
 | 功能 | 网络条件 |
 |---|---|
 | 查看内置地图、名单、搜索和交互 | 可离线 |
@@ -120,6 +122,7 @@ Agent 会分配稳定内部 ID。以后可以继续说“把 002 的学校改成
 合并规则见 [记录合并、冲突与交付](skills/graduation-map/references/reconciliation.md)；
 页面字段见 [数据规范](skills/graduation-map/references/data-schema.md)；
 验收见 [验证流程](skills/graduation-map/references/verification.md)。
+设备兼容及小米相关检索边界见 [兼容性说明](skills/graduation-map/references/compatibility.md)。
 
 `scripts/` 中的构建、校验和姓名更正工具供 Agent 按需选用，帮助稳定装配页面。它们不负责理解任意 TXT/Excel/对话，也不是一条命令全自动完成语义分析的入口。用户的正常流程是“安装 skill → 给 Agent 资料 → 校对必要疑点 → 收到成品”。
 
@@ -133,6 +136,6 @@ Agent 会分配稳定内部 ID。以后可以继续说“把 002 的学校改成
 
 真实名单和附加原图会嵌入 HTML；分享前按需要脱敏，不要放入本公开仓库。公开 skill 不表示授权公开某个班级的数据。
 
-原创技能、模板与辅助工具采用 MIT；MapLibre GL JS 5.6.2 和 Natural Earth 等来源保留各自许可。来源及边界见公开仓库 `THIRD_PARTY_NOTICES.md`。内置轮廓是分布展示参考，不用于测绘，也不证明某个人的实际就读经历。
+原创技能、模板与辅助工具采用 MIT；MapLibre GL JS 5.6.2、Leaflet 1.9.4 和 Natural Earth 等来源保留各自许可。来源及边界见公开仓库 `THIRD_PARTY_NOTICES.md`。内置轮廓是分布展示参考，不用于测绘，也不证明某个人的实际就读经历。
 
 > 维护约定：本地技能目录是维护源，GitHub 为分发副本。README 以 Agent 安装、资料输入和成品交付为主；原脚本使用细节见验证参考，勿恢复为主要入口。

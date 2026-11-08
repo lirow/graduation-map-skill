@@ -58,6 +58,15 @@ def script_text(path):
     return re.sub(r"</script", lambda match: "<\\/" + match[0][2:], value, flags=re.I)
 
 
+def leaflet_css(vendor):
+    root = vendor / "leaflet"
+    return re.sub(
+        r"url\(images/([a-zA-Z0-9.-]+)\)",
+        lambda match: "url(data:image/png;base64," + base64.b64encode((root / "images" / match[1]).read_bytes()).decode("ascii") + ")",
+        (root / "leaflet.css").read_text(encoding="utf-8"),
+    )
+
+
 def source_image(path):
     if path is None:
         return ""
@@ -79,6 +88,9 @@ def build_html(data, image_path=None):
     replacements = {
         "/*__MAP_CSS__*/": (vendor / "maplibre-gl.css").read_text(encoding="utf-8"),
         "/*__MAP_JS__*/": script_text(vendor / "maplibre-gl.js"),
+        "/*__FALLBACK_CSS__*/": leaflet_css(vendor),
+        "/*__FALLBACK_JS__*/": script_text(vendor / "leaflet" / "leaflet.js"),
+        "/*__MAP_ADAPTER_JS__*/": script_text(runtime / "offline-map.js"),
         "/*__APP_JS__*/": script_text(runtime / "app.js"),
         "/*__REVIEW_JS__*/": script_text(runtime / "review.js"),
         "/*__DATA_MODEL_JS__*/": script_text(runtime / "data-model.js"),
@@ -86,7 +98,7 @@ def build_html(data, image_path=None):
         "/*__SOURCE_IMAGE__*/": source_image(image_path),
         "/*__PROVINCE_GEO__*/": safe_json(load_json(geo / "china-provinces.json")),
         "/*__WORLD_GEO__*/": safe_json(load_json(geo / "world.json")),
-        "/*__LICENSE__*/": html.escape((vendor / "LICENSE.txt").read_text(encoding="utf-8")),
+        "/*__LICENSE__*/": html.escape((vendor / "LICENSE.txt").read_text(encoding="utf-8") + "\n\nLeaflet 1.9.4\n" + (vendor / "leaflet" / "LICENSE").read_text(encoding="utf-8")),
         "/*__GEO_SOURCES__*/": html.escape((geo / "sources.txt").read_text(encoding="utf-8")).replace("\n", "<br>"),
     }
     for marker in replacements:

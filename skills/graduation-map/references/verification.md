@@ -8,7 +8,7 @@ tldr: "graduation-map 的 verification 参考说明。"
 
 # Focused verification
 
-Run the Python validation and build first. Then open the output as a local `file://` page in a WebGL-capable browser; merely testing an HTTP development server does not establish double-click usability.
+Run the Python validation and build first. Then open the output as a local `file://` page; merely testing an HTTP development server does not establish double-click usability. Test both the normal 3D path and the independent offline 2D renderer.
 
 ## Core checks
 
@@ -18,6 +18,8 @@ Run the Python validation and build first. Then open the output as a local `file
 - Search a name; select a province; open a school; clear the filter; show pending records; return to the class overview. Detail cards, breadcrumb, highlight, routes and list must agree.
 - Mutate a test copy: remove a school's only student, add an overseas region, clear a coordinate, set the mother school to null, and use an empty roster. Statistics and about text must follow the data and no console errors should appear.
 - Confirm the export matches the same data source used by the page.
+- Run `tests/compatibility.cjs` against the same demo. Disable WebGL, remove/block workers, stall worker messages and remove the 3D engine separately; verify the page still displays actual geography, selects schools, searches and exports. Trigger context loss with a school selected and routes off; verify the selection and toggle survive and no stale error layer blocks controls.
+- Emulate DPR 3 on a phone; inspect backing-canvas size and antialias settings. Verify actual 2D pinch and pan input, not only calls to zoom APIs. Keep device simulation separate from physical Xiaomi testing; see [compatibility.md](compatibility.md).
 - For source analysis, reconcile original detail rows, grouped names, duplicate evidence, aggregate-only rows, same-name people, corrections and completeness claims. Record which actual files/formats were read; a hypothetical spreadsheet scenario is not a real workbook parsing test.
 
 ## Map and mobile traps
@@ -42,3 +44,5 @@ python3 scripts/build.py --data examples/demo-data.json --output /tmp/graduation
 ```
 
 In a full development checkout, run Python unit tests and `node tests/model.cjs`. For browser QA use Node.js 20+, `npm ci`, `npx playwright install chromium`, then `DEMO_HTML=/tmp/graduation-demo.html npm run test:browser`. In the public repository root, prefix builder paths with `skills/graduation-map/`; its tests and npm package are at the repository root. An installed skill need not include development tests.
+
+Also run `DEMO_HTML=/tmp/graduation-demo.html npm run test:compatibility` for the renderer-failure and mobile-resource checks.

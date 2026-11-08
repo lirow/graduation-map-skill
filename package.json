@@ -6,7 +6,8 @@
   "scripts": {
     "test:model": "node tests/model.cjs",
     "test:browser": "node tests/browser.cjs",
-    "test": "npm run test:model && npm run test:browser"
+    "test:compatibility": "node tests/compatibility.cjs",
+    "test": "npm run test:model && npm run test:browser && npm run test:compatibility"
   },
   "devDependencies": {
     "playwright": "1.62.1"
