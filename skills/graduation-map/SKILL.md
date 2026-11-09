@@ -7,13 +7,21 @@ description: Use when a user wants a graduation or college-admission destination
 
 # Graduation map
 
-You are the analyst and map author. Read the user's sources, resolve records and evidence, then deliver a shareable, editable HTML. The user may attach files, paste text, provide a permitted link or point to a local folder; do not require them to transcribe an image, prepare JSON, or run a pipeline. Choose available reading tools and use bundled helpers only where useful. Work in the user's output directory; keep private inputs outside this skill and public examples.
+You are the analyst and map author. Read the user's sources, list all analyzed data for user review, and generate a shareable, editable HTML only after the user confirms that version. The user may attach files, paste text, provide a permitted link or point to a local folder; do not require them to transcribe an image, prepare JSON, or run a pipeline. Choose available reading tools and use bundled helpers only where useful. Work in the user's output directory; keep private inputs outside this skill and public examples.
 
 ## Read and reconcile the sources
 
-Read [input-sources.md](references/input-sources.md) for the supplied formats: image/OCR, TXT/Markdown, Excel/CSV, conversation, PDF/Word, authorized web/form exports, structured data and mixed folders. It defines splitting, sheet roles, provenance and tool fallbacks. For images also read [image-to-data.md](references/image-to-data.md); enlarging pixels does not resolve ambiguous characters.
+Read [input-sources.md](references/input-sources.md) for the supplied formats: image/OCR, TXT/Markdown, Excel/CSV, conversation, PDF/Word, authorized web/form exports, structured data and mixed folders. It defines splitting, sheet roles and tool fallbacks. For images also read [image-to-data.md](references/image-to-data.md); enlarging pixels does not resolve ambiguous characters.
 
-Read [reconciliation.md](references/reconciliation.md) before merging or applying corrections. Assign stable person IDs, distinguish detail from summaries, preserve same-name people, and resolve field-level evidence without double counting. Output a short source inventory, reconciled roster/counts and actionable uncertainties. Continue with confirmed records when the rest can remain unknown.
+Read [reconciliation.md](references/reconciliation.md) before merging or applying corrections. Assign stable person IDs, distinguish detail from summaries, preserve same-name people, and avoid double counting.
+
+## List all data and wait for confirmation
+
+After analysis, present the complete student roster (ID, name, school, campus, country/province/city, destination status and unknown fields), the complete school/location table (including addresses and WGS84 coordinates), mother-school/class settings and counts. Show every record, not just samples or uncertainties. For long lists, provide a readable complete table file plus counts in chat.
+
+Ask the user to check and manually correct any errors, either by editing the table or by replying with ID/field/new value. Stop before building any HTML, including a draft, until the user explicitly confirms the displayed version. Reading a file successfully, a request to “make a map”, no visible ambiguities or silence is not confirmation. After any correction, show the full updated data and wait for confirmation again. A user can explicitly accept unknown fields; keep them unknown rather than filling them by guesswork. A later data change requires review of its updated version too.
+
+Keep only the current business data after reading. Do not require source IDs, row/crop references, OCR history, evidence archives or a separate proof report. The generated page and exports must not include source images, comparison dialogs, provenance links or obsolete evidence fields. Do not delete the user's original input files.
 
 Read [data-schema.md](references/data-schema.md) to map the analyzed records into the page contract. JSON is an agent working format, not a prerequisite for the user. For an existing page retain its established appearance and behavior unless asked to redesign.
 
@@ -34,8 +42,6 @@ python3 scripts/validate_data.py --data /path/to/class.json
 python3 scripts/build.py --data /path/to/class.json --output /path/to/class-map.html
 ```
 
-Add `--source-image /path/to/source.jpg` only when the user wants that image embedded. The output then contains the full image and names; it is not anonymized by being a static file.
-
 The resulting HTML puts editable `CLASS_INFO`, `ALMA_MATER`, `SCHOOLS`, `GRADUATES`, `REGION_CONFIG` and `MAP_CONFIG` before presentation code. Saving edits and refreshing rebuilds the view. Counts, labels, summaries, filters and JSON exports must all read the same objects.
 
 Street detail should attempt to enable automatically when its service is reachable. Use the actual source request, not only `navigator.onLine`; fail quietly to the embedded map on offline, timeout or source/tile failure, and retry on connectivity recovery. Do not add network prompts, failure banners or toasts. Keep a viewer's manual off choice until they re-enable it.
@@ -54,4 +60,4 @@ With no real sources, explain the supported analysis and optionally use explicit
 
 Publication of a reusable skill does not imply permission to publish the class roster. Use a fresh, allowlisted public package with synthetic data, preserve third-party notices, and inspect files and Git history for private inputs. Read [publishing.md](references/publishing.md) when publication is requested. Publishing requires the user's authorization; ordinary map creation does not authorize a public repository.
 
-> Maintenance: Source reading and reconciliation guidance lives in the linked references; scripts remain optional assembly aids. Do not restore a script-first or image-only entry point.
+> Maintenance: The full-data review and explicit confirmation precede generation. Source comparison and evidence archiving were removed at the user's request; keep only current business data. Source reading guidance lives in the linked references; scripts remain optional assembly aids.

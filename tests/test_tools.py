@@ -1,9 +1,7 @@
 """Portable CLI tests using only synthetic, non-personal records."""
 from pathlib import Path
-import base64
 import copy
 import json
-import re
 import subprocess
 import sys
 import tempfile
@@ -27,6 +25,30 @@ def sample():
 
 
 class ToolTests(unittest.TestCase):
+    def test_delivery_keeps_business_data_without_legacy_source_details(self):
+        from build import build_html
+        from data_tools import normalized_data
+        value = sample()
+        value["meta"]["sourceFile"] = "private-roster-sentinel.jpg"
+        value["schools"][0]["locationSource"] = "https://private-evidence.invalid"
+        value["students"][0].update(sourceRect=[1, 2, 30, 10], ocrName="old-name-sentinel",
+                                    nameCandidates=["candidate-sentinel"])
+        before = copy.deepcopy(value)
+        clean = normalized_data(value)
+        self.assertEqual(clean["students"][0]["name"], value["students"][0]["name"])
+        self.assertEqual(clean["students"][0]["schoolId"], "school-a")
+        self.assertEqual(clean["students"][0]["nameStatus"], "needs_review")
+        for key in ("sourceLabel", "sourceRect", "ocrName", "nameCandidates"):
+            self.assertNotIn(key, clean["students"][0])
+        self.assertNotIn("locationSource", clean["schools"][0])
+        self.assertNotIn("sourceFile", clean["meta"])
+        output = build_html(value)
+        for sentinel in ("private-roster-sentinel", "private-evidence.invalid",
+                         "old-name-sentinel", "candidate-sentinel", "openSourceReview",
+                         'id="source-image"', "对照原图"):
+            self.assertFalse(sentinel in output, f"Unexpected source-review content: {sentinel}")
+        self.assertEqual(value, before)
+
     def test_route_default_is_configurable_boolean(self):
         from data_tools import normalized_data, DataError
         self.assertIs(normalized_data(sample())["map"].get("showRoutes"), True)
@@ -90,29 +112,15 @@ class ToolTests(unittest.TestCase):
             self.assertNotRegex(source, r"/\*__[A-Z_]+__\*/")
             self.assertNotRegex(source, r'<script[^>]+src=')
             self.assertNotRegex(source, r'<link[^>]+rel=["\']stylesheet')
-            self.assertRegex(source, r'<script type="text/plain" id="source-image">\s*</script>')
+            self.assertNotIn('id="source-image"', source)
             self.assertNotIn(str(data), source)
 
-    def test_build_embeds_image_only_when_explicitly_given(self):
-        # A generated 1x1 transparent PNG, no source photograph or student data.
-        image_bytes = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=")
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp = Path(tmp)
-            image = tmp / "synthetic.png"; image.write_bytes(image_bytes)
-            data = self.write_json(tmp / "input.json", sample())
-            result = self.run_cli("build.py", "--data", data, "--output", tmp / "result.html", "--source-image", image)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            html = (tmp / "result.html").read_text(encoding="utf-8")
-            match = re.search(r'id="source-image">data:image/png;base64,([^<]+)</script>', html)
-            self.assertIsNotNone(match)
-            self.assertEqual(base64.b64decode(match[1]), image_bytes)
-
-    def test_corrections_use_stable_ids_and_preserve_evidence(self):
+    def test_corrections_use_stable_ids_and_keep_current_data_only(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             value = sample()
             value["students"][0]["sourceRect"] = [1, 2, 30, 10]
-            value["students"][0]["reviewNote"] = "校区仍需用户确认。"
+            value["schools"][0]["campusStatus"] = "unknown"
             data = self.write_json(tmp / "input.json", value)
             corrections = tmp / "corrections.csv"
             corrections.write_text("id,name\nstudent-b,更正同学乙\nstudent-a,更正同学甲\n", encoding="utf-8")
@@ -121,11 +129,12 @@ class ToolTests(unittest.TestCase):
             updated = json.loads((tmp / "corrected.json").read_text(encoding="utf-8"))
             self.assertEqual(updated["students"][0]["name"], "更正同学甲")
             self.assertEqual(updated["students"][1]["name"], "更正同学乙")
-            self.assertEqual(updated["students"][0]["sourceRect"], [1, 2, 30, 10])
+            self.assertNotIn("sourceRect", updated["students"][0])
+            self.assertNotIn("ocrName", updated["students"][0])
             self.assertEqual(updated["students"][0]["schoolId"], "school-a")
             self.assertEqual(updated["students"][0]["nameStatus"], "user_confirmed")
-            self.assertEqual(updated["students"][0]["reviewNote"], "校区仍需用户确认。")
-            self.assertIn("更正", updated["students"][0]["nameCorrectionNote"])
+            self.assertEqual(updated["schools"][0]["campusStatus"], "unknown")
+            self.assertNotIn("nameCorrectionNote", updated["students"][0])
             self.assertEqual(json.loads(data.read_text(encoding="utf-8")), value)
 
     def test_corrections_reject_ambiguous_or_missing_ids_and_blank_names(self):

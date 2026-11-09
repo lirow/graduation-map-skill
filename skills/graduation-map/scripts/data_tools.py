@@ -131,10 +131,6 @@ def validate_data(data):
             if school_id not in school_ids:
                 raise DataError(f"{label}.schoolId references missing school: {school_id}")
         _place(student, label)
-        if "sourceRect" in student and student["sourceRect"] is not None:
-            rect = student["sourceRect"]
-            if not isinstance(rect, list) or len(rect) != 4 or not all(_number(n) for n in rect) or min(rect[:2]) < 0 or min(rect[2:]) <= 0:
-                raise DataError(f"{label}.sourceRect must be [x,y,width,height] with non-negative origin and positive size.")
     regions = data.get("regions", [])
     _array(regions, "regions")
     region_names = set()
@@ -175,10 +171,26 @@ def validate_data(data):
     return data
 
 
+def current_data(data):
+    """Copy current business records, omitting obsolete input-review metadata."""
+    result = deepcopy(data)
+    records = [result["meta"], result.get("origin"), *result["schools"], *result["students"]]
+    obsolete = {"coordinateNote", "reviewNote", "researchNote", "nameCandidates",
+                "nameCorrectionNote", "schoolOriginal", "schoolNameOriginal",
+                "originalName"}
+    for record in records:
+        if not record:
+            continue
+        for key in list(record):
+            if key in obsolete or key.startswith(("source", "ocr")) or key.endswith("Source"):
+                del record[key]
+    return result
+
+
 def normalized_data(data):
     """Return a fresh object with presentation defaults; raw input is unchanged."""
     validate_data(data)
-    result = deepcopy(data)
+    result = current_data(data)
     result.setdefault("origin", None)
     result.setdefault("regions", [])
     result["map"] = {**deepcopy(DEFAULT_MAP), **result.get("map", {})}

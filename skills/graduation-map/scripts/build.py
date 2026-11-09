@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build one self-contained graduation-map HTML from local JSON and optional image.
+"""Build one self-contained graduation-map HTML from confirmed local JSON.
 
 Python standard library only. The build never downloads resources or uploads data.
 Core maps work offline; optional detailed street maps require network access.
@@ -33,7 +33,7 @@ def editable_data(data):
         ("CLASS_INFO", "meta", "班级、年份、名单完整性"),
         ("ALMA_MATER", "origin", "母校、校区、地址、坐标及确认状态"),
         ("SCHOOLS", "schools", "学校/校区：id 必须唯一"),
-        ("GRADUATES", "students", "毕业生：姓名、schoolId、原图对照信息"),
+        ("GRADUATES", "students", "毕业生：姓名、schoolId 与当前数据状态"),
         ("REGION_CONFIG", "regions", "可选地区标签位置配置"),
         ("MAP_CONFIG", "map", "地图视角与可选在线底图配置"),
     ):
@@ -67,20 +67,7 @@ def leaflet_css(vendor):
     )
 
 
-def source_image(path):
-    if path is None:
-        return ""
-    raw = Path(path).read_bytes()
-    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
-        mime = "image/png"
-    elif raw.startswith(b"\xff\xd8\xff"):
-        mime = "image/jpeg"
-    else:
-        raise DataError("Source image must be a local PNG or JPEG file; no SVG or remote URL is accepted.")
-    return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii")
-
-
-def build_html(data, image_path=None):
+def build_html(data):
     """Return the rendered HTML without writing files or modifying input data."""
     data = normalized_data(data)
     runtime, vendor, geo = (ASSETS / name for name in ("runtime", "vendor", "geo"))
@@ -92,10 +79,8 @@ def build_html(data, image_path=None):
         "/*__FALLBACK_JS__*/": script_text(vendor / "leaflet" / "leaflet.js"),
         "/*__MAP_ADAPTER_JS__*/": script_text(runtime / "offline-map.js"),
         "/*__APP_JS__*/": script_text(runtime / "app.js"),
-        "/*__REVIEW_JS__*/": script_text(runtime / "review.js"),
         "/*__DATA_MODEL_JS__*/": script_text(runtime / "data-model.js"),
         "/*__EDITABLE_DATA__*/": editable_data(data),
-        "/*__SOURCE_IMAGE__*/": source_image(image_path),
         "/*__PROVINCE_GEO__*/": safe_json(load_json(geo / "china-provinces.json")),
         "/*__WORLD_GEO__*/": safe_json(load_json(geo / "world.json")),
         "/*__LICENSE__*/": html.escape((vendor / "LICENSE.txt").read_text(encoding="utf-8") + "\n\nLeaflet 1.9.4\n" + (vendor / "leaflet" / "LICENSE").read_text(encoding="utf-8")),
@@ -114,18 +99,15 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data", required=True, help="Input UTF-8 JSON with meta, schools and students. origin may be null; map and regions are optional.")
     parser.add_argument("--output", required=True, help="Explicit destination .html path. Existing output is replaced; input/assets cannot be used as output.")
-    parser.add_argument("--source-image", help="Optional local PNG/JPEG to embed. Omit to include no private image.")
     args = parser.parse_args(argv)
     try:
         output = Path(args.output).resolve()
         protected = {Path(args.data).resolve()}
-        if args.source_image:
-            protected.add(Path(args.source_image).resolve())
         if output in protected or output == ASSETS or ASSETS in output.parents:
             raise DataError("Output must differ from input files and bundled assets.")
         if output.suffix.lower() not in (".html", ".htm"):
             raise DataError("Output must use an .html or .htm extension.")
-        rendered = build_html(load_json(args.data), args.source_image)
+        rendered = build_html(load_json(args.data))
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(rendered, encoding="utf-8")
     except (DataError, OSError, ValueError) as error:

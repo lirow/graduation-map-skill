@@ -19,9 +19,9 @@ This is the page/optional builder contract after the agent analyzes the user's s
 | `regions[]` | `name`, `shortName`, `centroid`, `isCountry`, `geoName` | Optional label anchors/geometry aliases, especially for foreign countries. |
 | `map` | `showRoutes`, camera limits, zoom thresholds, glyph/tile URLs | Optional presentation/resource settings. `showRoutes` defaults to `true`; the layer-panel switch controls it during viewing. |
 
-Optional evidence fields include `coordinateNote`, `locationSource`, `identitySource`, `sourceLabel`, `sourceRect`, `reviewNote`, `nameCandidates` and `ocrName`.
+Keep current business values and their confirmation/unknown states. Do not add source-image crops, source labels/links, OCR history or proof notes. The builder and correction helper strip obsolete source/evidence fields from older inputs without changing their input files. Do not set `user_confirmed` merely because a file was read successfully.
 
-For non-image records, use a real `sourceLabel` such as `roster.txt lines 5-6`, `admissions.xlsx / Final / row 8` or `conversation message 4`; omit `sourceRect`. Keep detailed multi-source evidence/conflicts in the agent's working record or an accompanying review document; extra metadata is not automatically rendered by the template. Do not set `user_confirmed` merely because a file was read successfully.
+Before generating, show all student, school/location, class and mother-school data for manual review. After user corrections, show the complete revised version and obtain explicit confirmation; see [reconciliation.md](reconciliation.md).
 
 ## Location and confirmation
 
@@ -41,3 +41,5 @@ The generated variables are `CLASS_INFO`, `ALMA_MATER`, `SCHOOLS`, `GRADUATES`, 
 Mother-school routes start enabled when the mother school has valid coordinates. Use `map.showRoutes: false` to start with them hidden. Missing mother-school coordinates disable the switch and do not create a route. Switching regions or returning to the overview preserves the viewer's current toggle choice.
 
 Street detail attempts to enable automatically using `streetsSourceUrl`. Offline or inaccessible source/tile data quietly leaves the embedded map active; connectivity recovery retries unless the viewer manually switched streets off. There is no network status toast or blocking prompt.
+
+> Maintenance: The data contract retains current records only; source comparison/evidence fields are no longer part of the delivered map.

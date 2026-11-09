@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Apply a user-verified CSV of id,name corrections using stable student IDs."""
 import argparse
-from copy import deepcopy
 import csv
-from datetime import date
 from pathlib import Path
 import sys
-from data_tools import DataError, load_json, validate_data, write_json
+from data_tools import DataError, current_data, load_json, validate_data, write_json
 
 
 def import_corrections(data, corrections_path):
@@ -30,18 +28,12 @@ def import_corrections(data, corrections_path):
             corrections[student_id] = name
     if not corrections:
         raise DataError("Correction CSV contains no records.")
-    updated = deepcopy(data)
+    updated = current_data(data)
     for student in updated["students"]:
         if student["id"] not in corrections:
             continue
-        student.setdefault("ocrName", student["name"])
-        student.setdefault("ocrCandidates", deepcopy(student.get("nameCandidates", [])))
         student["name"] = corrections[student["id"]]
         student["nameStatus"] = "user_confirmed"
-        student["nameCandidates"] = []
-        student["nameSource"] = "用户校对 CSV（按稳定 id 匹配）"
-        student["nameConfirmedDate"] = date.today().isoformat()
-        student["nameCorrectionNote"] = "姓名已按用户提供的校对结果更正；其他备注与原图信息保留用于对照。"
     return updated, len(corrections)
 
 
@@ -59,7 +51,7 @@ def main(argv=None):
     except (DataError, OSError, ValueError, csv.Error) as error:
         print(f"Correction import failed: {error}", file=sys.stderr)
         return 1
-    print(f"Applied {count} verified names to {args.output}. Input files and source evidence are unchanged.")
+    print(f"Applied {count} names to {args.output}. Confirm the updated full roster before generating HTML.")
     return 0
 
 

@@ -12,7 +12,7 @@ Run the Python validation and build first. Then open the output as a local `file
 
 ## Core checks
 
-- Switch the browser offline, reload, and verify the embedded engine, outlines, names and source image (if attached) still load. Street detail attempts automatic loading only when reachable; it must not block the offline core.
+- Switch the browser offline, reload, and verify the embedded engine, outlines and names still load. Check that original-image controls, comparison dialogs and source evidence are absent from the HTML and JSON export. Street detail attempts automatic loading only when reachable; it must not block the offline core.
 - With controlled source responses, verify automatic street enabling, silent source/tile failure and timeout fallback, offline-to-online recovery, and persistence of a manual off choice. Do not replace source reachability checks with `navigator.onLine`, and do not add network prompts/toasts. Report mocked service checks separately from a live provider check.
 - Compare total students, each region count, school/campus count and shared-school membership. Unknown points must not disappear from the roster or produce fake points.
 - Search a name; select a province; open a school; clear the filter; show pending records; return to the class overview. Detail cards, breadcrumb, highlight, routes and list must agree.
@@ -21,6 +21,7 @@ Run the Python validation and build first. Then open the output as a local `file
 - Run `tests/compatibility.cjs` against the same demo. Disable WebGL, remove/block workers, stall worker messages and remove the 3D engine separately; verify the page still displays actual geography, selects schools, searches and exports. Trigger context loss with a school selected and routes off; verify the selection and toggle survive and no stale error layer blocks controls.
 - Emulate DPR 3 on a phone; inspect backing-canvas size and antialias settings. Verify actual 2D pinch and pan input, not only calls to zoom APIs. Keep device simulation separate from physical Xiaomi testing; see [compatibility.md](compatibility.md).
 - For source analysis, reconcile original detail rows, grouped names, duplicate evidence, aggregate-only rows, same-name people, corrections and completeness claims. Record which actual files/formats were read; a hypothetical spreadsheet scenario is not a real workbook parsing test.
+- Exercise the agent workflow: a clear complete roster still requires full-data review; a correction requires a complete updated table and another confirmation; only explicit confirmation of the current version permits HTML generation. Check student, school/location, class, mother-school and setting data are all available to the user.
 
 ## Map and mobile traps
 

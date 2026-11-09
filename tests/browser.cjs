@@ -220,12 +220,12 @@ async function streetChecks(browser) {
       assert.ok(await page.evaluate(() => classMap.map.getZoom()<classMap.data.map.regionLabelMaxZoom));
       await page.evaluate(() => classMap.selectStudent('demo-16'));await settle(page);
       assert.equal(await page.locator('#campus-zoom').count(),0);
-      await page.evaluate(() => openSourceReview('demo-01'));
-      await page.waitForFunction(() => document.querySelector('#source-review .sr-image-error')?.textContent.includes('原图'));
-      assert.match(await page.locator('#source-review .sr-image-error').textContent(),/未附加|没有找到/);
-      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#source-open, #source-row-button, #source-review, #source-image, #unlocated-source').count(),0);
+      assert.equal(await page.evaluate(() => typeof window.openSourceReview),'undefined');
+      await page.locator('#pending-button').click();
+      assert.equal(await page.locator('#list [data-student]').count(),await page.evaluate(()=>classMap.stats.needsReview||classMap.stats.total));
       await offlineChecks(desktop);
-      results.push({name:'desktop offline search, grouped members, detail, home, source empty state',pass:true});
+      results.push({name:'desktop offline search, grouped members, detail, home, pending filter; no source review',pass:true});
     } finally {await desktop.context.close();}
 
     for(const override of [{noOrigin:true},{routesOff:true}]){

@@ -1,3 +1,11 @@
+---
+type: 技能参考
+scope: skills-on-demand / 生活 / graduation-map
+updated: 2026-11-08
+tags: [skill, graduation-map]
+tldr: "graduation-map 的 publishing 参考说明。"
+---
+
 # Publishing the reusable workflow
 
 Use this only when the user has requested public distribution.
@@ -12,4 +20,4 @@ Before the first push:
 4. Preserve MapLibre's distribution notices and Natural Earth's source/processing notes. State which features work offline and which request online tiles.
 5. Push only the reviewed content to the user-authorized account/repository. Check the actual repository visibility and remote commit afterwards; do not claim public publication from a local commit alone.
 
-Keep real maps private unless the user separately authorizes publishing those specific contents. A published HTML contains its JSON and any embedded original image even when the UI hides them.
+Keep real maps private unless the user separately authorizes publishing those specific contents. A published HTML contains its business JSON even when the UI hides it. Original-image embedding and source-review metadata are no longer supported.

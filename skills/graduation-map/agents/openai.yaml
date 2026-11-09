@@ -1,6 +1,6 @@
 interface:
   display_name: "毕业去向地图"
   short_description: "由 Agent 分析图片、文本、表格或对话资料，制作可校对的毕业去向单文件交互地图"
-  default_prompt: "使用 $graduation-map，分析我提供的毕业去向文件或对话资料，合并校对名单并交付单文件交互地图；不确定的信息保留待核。"
+  default_prompt: "使用 $graduation-map，分析我提供的毕业去向资料，列出全部名单和学校位置数据让我手动核对修改；收到我对当前版本的明确确认后，再生成单文件交互地图。"
 policy:
   allow_implicit_invocation: true

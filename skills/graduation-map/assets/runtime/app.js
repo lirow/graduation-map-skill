@@ -15,7 +15,7 @@
   const {schools,students,counts,schoolStudents,activeSchools,referencedSchools,
     provinceByName,sortedProvinces,unknown,stats,regionOf,regionCenter,
     isOverseas,isLocated,isCampusConfirmed,overseasGeometryNames} = model;
-  const readableName = s => s.name || `姓名待补充 · ${s.sourceLabel || s.id}`;
+  const readableName = s => s.name || `姓名待补充 · ${s.id}`;
   const nameLabel = s => `${readableName(s)}${s.nameStatus==='needs_review'?'〔待核〕':''}`;
   const reviewCount = stats.needsReview;
   const state = {tab:'provinces', province:null, unknownOnly:false, query:'', school:null, student:null, labels:true, routes:config.showRoutes !== false && isLocated(data.origin), streets:false, ready:false,scope:'domestic',renderer:'webgl'};
@@ -43,7 +43,6 @@
   $('brand-subtitle').textContent=`${className} · 录取去向`;
   $('header-caption').textContent=[data.origin?.name,'我们的下一站'].filter(Boolean).join(' · ');
   $('class-eyebrow').textContent=[data.origin?.name,className].filter(Boolean).join(' · ');
-  $('source-open-label').textContent=`${data.meta.isDemo?'虚构示例':'资料对照'} · ${stats.total} 人`;
   $('total-count').textContent=stats.total;
   $('total-count-label').textContent=data.meta.rosterComplete?'位同班同学':'位已收录同学';
   $('province-count').textContent=stats.domesticRegions;
@@ -51,7 +50,7 @@
   $('province-tab-count').textContent=counts.size;
   $('student-tab-count').textContent=stats.total;
   $('coverage').textContent=`${data.meta.rosterComplete?'全班':'已收录'} ${stats.total} 人 · 海外 ${stats.overseas} 人${stats.unknown?' · 去向待补 '+stats.unknown+' 人':''}`;
-  $('pending-button').textContent=data.meta.isDemo?'虚构示例 · 查看资料':!stats.total?'暂无名单':reviewCount?`${reviewCount} 个姓名待核 ↗`:stats.confirmedNames===stats.total?'姓名已校对 ✓':'查看原图对照 ↗';
+  $('pending-button').textContent=!stats.total?'暂无名单':reviewCount?`${reviewCount} 个姓名待核 ↗`:'查看全部同学 ↗';
   $('pending-button').disabled=!stats.total;
   $('source-status').textContent=data.meta.isDemo?'虚构数据演示':`从这里出发 · ${reviewCount?'部分姓名待核':stats.confirmedNames===stats.total&&stats.total?'姓名已校对':'录取去向'}`;
   $('overseas-button').textContent=`国内 / 海外 · ${stats.overseas}`;
@@ -60,14 +59,14 @@
   $('routes-toggle').disabled=!hasOriginPoint();
   $('routes-toggle').checked=state.routes;
   $('origin-name').textContent=originTitle;
-  $('origin-note').textContent=data.origin?.coordinateNote||originStatus;
+  $('origin-note').textContent=originStatus;
   $('origin-note').hidden=true;
   $('origin-name').onclick=()=>{$('origin-note').hidden=!$('origin-note').hidden;};
   $('settings-description').textContent=`母校：${originTitle}；${originStatus}连线表示录取去向，不是实际行程。`;
   $('loading-caption').textContent=year?`正在展开 ${year} 年的夏天`:'正在展开我们的去向地图';
   $('about-kicker').textContent=[data.origin?.name,className].filter(Boolean).join(' · ');
-  $('about-summary').textContent=`${data.meta.sourceTitle?'依据《'+data.meta.sourceTitle+'》整理。':''}${rosterSummary}国内 ${stats.provinceKnown} 人，海外 ${stats.overseas} 人${stats.unknown?'，去向待补充 '+stats.unknown+' 人':''}，涉及 ${stats.schoolCount} 所学校。`;
-  $('about-name-status').textContent=data.meta.isDemo?'当前姓名、学校和去向全部为虚构示例，仅用于演示交互。':`${nameSummary}原图可选附加用于对照；页面与导出均读取同一份业务数据。`;
+  $('about-summary').textContent=`${rosterSummary}国内 ${stats.provinceKnown} 人，海外 ${stats.overseas} 人${stats.unknown?'，去向待补充 '+stats.unknown+' 人':''}，涉及 ${stats.schoolCount} 所学校。`;
+  $('about-name-status').textContent=data.meta.isDemo?'当前姓名、学校和去向全部为虚构示例，仅用于演示交互。':`${nameSummary}页面与导出均读取同一份业务数据。`;
   $('about-locations').textContent=`${stats.locatedSchools} 所学校有地图位置，${stats.unlocatedSchools} 所尚缺坐标；${stats.campusUnconfirmed} 所学校的当年就读校区尚待确认。各学校卡片分别说明确认状态。`;
   $('about-origin').textContent=`母校：${originTitle}；${originStatus}${data.origin?.address||''}`;
   if(!hasOriginPoint())$('routes-toggle').closest('label').title='母校坐标待补充后启用连线';
@@ -175,7 +174,7 @@
   function setTab(tab) {state.tab=tab;state.unknownOnly=false;if(tab==='provinces'){state.province=null;state.query='';$('search').value='';$('clear-search').hidden=true;clearSelection();}renderList();refreshSources();updateBreadcrumb();}
   function queryMatches(s) {
     const place=schools.get(s.schoolId);
-    return [s.name,...(s.nameCandidates||[]),s.province,s.sourceLabel,place?.name,place?.city,place?.campus].filter(Boolean).join(' ').toLocaleLowerCase().includes(state.query.toLocaleLowerCase());
+    return [s.name,s.province,place?.name,place?.city,place?.campus].filter(Boolean).join(' ').toLocaleLowerCase().includes(state.query.toLocaleLowerCase());
   }
   function filteredStudents() {return students.filter(s=>(!state.province||s.province===state.province)&&(!state.unknownOnly||s.nameStatus==='needs_review')&&(!state.query||queryMatches(s)));}
   function renderList() {
@@ -210,13 +209,10 @@
   }
   function schoolDetail(s) {
     const members=schoolStudents.get(s.id)||[];
-    const selected=members.find(m=>m.id===state.student)||members[0];
     const point=isLocated(s),coordinates=point?`${Math.abs(s.lng).toFixed(4)}° ${s.lng<0?'W':'E'} &nbsp; ${Math.abs(s.lat).toFixed(4)}° ${s.lat<0?'S':'N'}`:'学校位置待核，暂不放置地图点';
-    const source=s.locationSource&&/^https:\/\//.test(s.locationSource)?` · <a href="${escapeHTML(s.locationSource)}" target="_blank" rel="noopener">位置来源</a>`:'';
     const campusNote=isCampusConfirmed(s)?'就读校区已确认；地图点为校区代表位置。':point?'学校参考位置，当年就读校区尚待确认。':'学校位置尚待补充。';
-    $('detail-content').innerHTML=`<div class="detail-kicker">${escapeHTML(short(regionOf(s)))} · ${members.length} 位同学</div><h2>${escapeHTML(s.name)}</h2><div class="detail-location">${escapeHTML(s.city||short(regionOf(s)))} · ${escapeHTML(s.campus||'就读校区待核')}${s.address?'<br>'+escapeHTML(s.address):''}</div><div class="detail-members">${members.map(m=>`<button class="name-chip ${state.student===m.id?'active':''}" data-member="${escapeHTML(m.id)}">${escapeHTML(nameLabel(m))}</button>`).join('')}</div><div class="coordinates">${icon('pin')}<span>${coordinates}</span></div><p class="location-warning">${campusNote}${source}</p><button class="source-link" id="source-row-button">${selected?.nameStatus==='needs_review'?'姓名笔画待核 · ':''}对照原图 ${escapeHTML(selected?.sourceLabel||'')}${icon('arrow')}</button>${point?`<button class="primary-btn" id="campus-zoom">${isCampusConfirmed(s)?'查看校区位置':'查看学校参考位置'}${icon('arrow')}</button>`:''}`;
+    $('detail-content').innerHTML=`<div class="detail-kicker">${escapeHTML(short(regionOf(s)))} · ${members.length} 位同学</div><h2>${escapeHTML(s.name)}</h2><div class="detail-location">${escapeHTML(s.city||short(regionOf(s)))} · ${escapeHTML(s.campus||'就读校区待核')}${s.address?'<br>'+escapeHTML(s.address):''}</div><div class="detail-members">${members.map(m=>`<button class="name-chip ${state.student===m.id?'active':''}" data-member="${escapeHTML(m.id)}">${escapeHTML(nameLabel(m))}</button>`).join('')}</div><div class="coordinates">${icon('pin')}<span>${coordinates}</span></div><p class="location-warning">${campusNote}</p>${point?`<button class="primary-btn" id="campus-zoom">${isCampusConfirmed(s)?'查看校区位置':'查看学校参考位置'}${icon('arrow')}</button>`:''}`;
     showDetail(true);
-    $('source-row-button').onclick=()=>window.openSourceReview?.(selected?.id);
     if(point)$('campus-zoom').onclick=()=>{
       focusSchool(s,config.closeUpZoom);
     };
@@ -243,8 +239,7 @@
     if(s.province) {state.province=s.province;if(regionCenter(s.province))fit([regionCenter(s.province)],config.overviewMaxZoom);}
     else state.province=null;
     map.setFilter('province-selected',['==',['get','name'],s.province||'']);refreshSources();renderList();updateBreadcrumb();
-    $('detail-content').innerHTML=`<div class="detail-kicker">${s.province?'学校待补充':'去向待补充'}</div><h2>${escapeHTML(nameLabel(s))}</h2><div class="detail-location">${s.province?escapeHTML(s.province)+' · 已计入地区人数':'尚未分配省份或学校'}</div><p class="detail-note" style="margin-top:18px">未添加未经核实的学校位置点。</p><button class="source-link" id="unlocated-source">查看资料对照</button>`;
-    $('unlocated-source').onclick=()=>window.openSourceReview?.(s.id);
+    $('detail-content').innerHTML=`<div class="detail-kicker">${s.province?'学校待补充':'去向待补充'}</div><h2>${escapeHTML(nameLabel(s))}</h2><div class="detail-location">${s.province?escapeHTML(s.province)+' · 已计入地区人数':'尚未分配省份或学校'}</div><p class="detail-note" style="margin-top:18px">未添加未经核实的学校位置点。</p>`;
     showDetail(true);closeMobileList();announce(`${s.name}：${s.province?'学校待补充':'去向待补充'}`);
   }
   function closeDetail() {state.school=null;state.student=null;showDetail(false);refreshSources();renderList();updateBreadcrumb();if(mobile())map.easeTo({padding:padding(),duration:duration(450)});}
@@ -362,7 +357,7 @@
           el.classList.toggle('selected',selected);place(el,p,key,{priority:selected});}
       }
     }
-    if(state.scope==='domestic'&&hasOriginPoint()){const p=map.project([data.origin.lng,data.origin.lat]);const key='origin';const el=labelNode(key,'origin-label',escapeHTML(originTitle)+(isCampusConfirmed(data.origin)?' · 母校':' · 参考点'),()=>toast(data.origin.coordinateNote),originTitle+'，'+originStatus);place(el,p,key);}
+    if(state.scope==='domestic'&&hasOriginPoint()){const p=map.project([data.origin.lng,data.origin.lat]);const key='origin';const el=labelNode(key,'origin-label',escapeHTML(originTitle)+(isCampusConfirmed(data.origin)?' · 母校':' · 参考点'),()=>toast(originStatus),originTitle+'，'+originStatus);place(el,p,key);}
     for(const[key,el]of labelElements){if(!seen.has(key))el.hidden=true;}
     $('leader-lines').innerHTML=paths.join('');
   }
@@ -387,8 +382,7 @@
   $('search').oninput=()=>{state.query=$('search').value.trim();$('clear-search').hidden=!state.query;if(state.query&&(state.province||state.unknownOnly||state.school)){state.province=null;state.unknownOnly=false;clearSelection();refreshSources();updateBreadcrumb();}renderList();};
   $('clear-search').onclick=()=>{state.query='';$('search').value='';$('clear-search').hidden=true;renderList();$('search').focus();};
   $('clear-filter').onclick=()=>{state.province=null;state.unknownOnly=false;state.query='';$('search').value='';$('clear-search').hidden=true;clearSelection();renderList();refreshSources();updateBreadcrumb();};
-  $('pending-button').onclick=()=>{if(!reviewCount){window.openSourceReview?.();return;}state.tab='students';state.province=null;state.unknownOnly=true;state.query='';$('search').value='';$('clear-search').hidden=true;clearSelection();renderList();refreshSources();updateBreadcrumb();};
-  $('source-open').onclick=()=>window.openSourceReview?.();
+  $('pending-button').onclick=()=>{state.tab='students';state.province=null;state.unknownOnly=reviewCount>0;state.query='';$('search').value='';$('clear-search').hidden=true;clearSelection();renderList();refreshSources();updateBreadcrumb();};
   $('overseas-button').onclick=()=>{state.scope=state.scope==='overseas'?'domestic':'overseas';state.province=null;state.unknownOnly=false;state.tab='provinces';state.query='';$('search').value='';$('clear-search').hidden=true;clearSelection();refreshSources();renderList();updateBreadcrumb();map.easeTo({bearing:0,pitch:25,duration:0});fit(overviewPoints(),config.overviewMaxZoom);updateZoomUI();};
   $('detail-close').onclick=closeDetail;
   for(const id of ['home-button','brand-home','crumb-home'])$(id).onclick=()=>resetView();
