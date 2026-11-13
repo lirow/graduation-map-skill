@@ -29,7 +29,7 @@ Read [data-schema.md](references/data-schema.md) to map the analyzed records int
 
 Use one student record per person and one school record per school/campus location. Students reference `schoolId`; schools own their location. Keep the class, mother school, schools, graduates, region-label configuration and map settings separate.
 
-Distinguish three independent facts: name confidence, whether the attending campus is confirmed, and whether a representative coordinate is known. A known school center does not establish a historical campus. Use WGS84 longitude/latitude; do not mix GCJ-02 or BD-09 values with this basemap.
+Distinguish three independent facts: name confidence, whether the attending campus is confirmed, and whether a representative coordinate is known. A known school center does not establish a historical campus. Use WGS84 longitude/latitude; do not mix GCJ-02 or BD-09 values with this basemap — convert them with `scripts/coord.py` rather than pasting raw POI values.
 
 Unknown coordinates are `null`. A known province may contribute to its count without a school point. For ambiguous cross-province campuses, leave the actual destination region unresolved rather than choosing a headquarters. Keep overseas and unresolved records in the roster. Treat a source-image row count as the complete class size only after the user confirms completeness.
 
@@ -38,9 +38,12 @@ Unknown coordinates are `null`. A known province may contribute to its count wit
 Adapt the bundled template or generate a compatible page with your available tools. The following helpers are optional local validation/assembly tools, not readers for arbitrary source files or replacements for your analysis. Run `--help` before adapting a command; paths are relative to this skill:
 
 ```sh
-python3 scripts/validate_data.py --data /path/to/class.json
+python3 scripts/coord.py --from gcj --to wgs --lat LAT --lng LNG   # or --file points.json
+python3 scripts/validate_data.py --data /path/to/class.json --report
 python3 scripts/build.py --data /path/to/class.json --output /path/to/class-map.html
 ```
+
+`--report` adds the reconciliation a structural check cannot do: headcount against status buckets, regional totals, shared schools, coordinates inside the country, and each school's distance from the mother school. Wording that a class needs phrased differently belongs in `meta.statusLabels` / `meta.unknownLabel`; only reach for `build.py --assets <dir>` when the change cannot be expressed as data.
 
 The resulting HTML puts editable `CLASS_INFO`, `ALMA_MATER`, `SCHOOLS`, `GRADUATES`, `REGION_CONFIG` and `MAP_CONFIG` before presentation code. Saving edits and refreshing rebuilds the view. Counts, labels, summaries, filters and JSON exports must all read the same objects.
 

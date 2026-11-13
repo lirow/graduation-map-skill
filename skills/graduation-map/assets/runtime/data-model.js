@@ -123,6 +123,8 @@
     const isLocated = record => Boolean(record && validPosition(record.lng, record.lat));
     const isCampusConfirmed = record => Boolean(record &&
       (['user_confirmed','source_confirmed'].includes(record.campusStatus) || record.coordinateStatus === 'campus_confirmed'));
+    // assumed：按学校主校区的推定值，既不是已确认，也不该混进“尚待确认”里。
+    const isCampusAssumed = record => Boolean(record && record.campusStatus === 'assumed');
     const students = [...studentIndex.values()].map(student => {
       const school = schools.get(student.schoolId);
       return {...student, province:regionOf(student), country:text(school?.country) || text(student.country) || homeCountry};
@@ -219,10 +221,11 @@
       unlocatedSchools:referencedSchools.length - activeSchools.length,
       domesticRegions:sortedProvinces.length - overseasRegions.length,
       overseasRegions:overseasRegions.length,
-      campusUnconfirmed:referencedSchools.filter(s => !isCampusConfirmed(s)).length
+      campusUnconfirmed:referencedSchools.filter(s => !isCampusConfirmed(s) && !isCampusAssumed(s)).length,
+      campusAssumed:referencedSchools.filter(isCampusAssumed).length
     };
     return {schools, students, counts, schoolStudents, referencedSchools, activeSchools,
       provinceByName, sortedProvinces, unknown, stats, regionOf, regionCenter,
-      isOverseas, isLocated, isCampusConfirmed, overseasGeometryNames};
+      isOverseas, isLocated, isCampusConfirmed, isCampusAssumed, overseasGeometryNames};
   };
 })();

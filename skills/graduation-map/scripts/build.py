@@ -67,10 +67,11 @@ def leaflet_css(vendor):
     )
 
 
-def build_html(data):
+def build_html(data, assets=None):
     """Return the rendered HTML without writing files or modifying input data."""
     data = normalized_data(data)
-    runtime, vendor, geo = (ASSETS / name for name in ("runtime", "vendor", "geo"))
+    root = Path(assets).resolve() if assets else ASSETS
+    runtime, vendor, geo = (root / name for name in ("runtime", "vendor", "geo"))
     template = (runtime / "page.html").read_text(encoding="utf-8")
     replacements = {
         "/*__MAP_CSS__*/": (vendor / "maplibre-gl.css").read_text(encoding="utf-8"),
@@ -99,15 +100,17 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data", required=True, help="Input UTF-8 JSON with meta, schools and students. origin may be null; map and regions are optional.")
     parser.add_argument("--output", required=True, help="Explicit destination .html path. Existing output is replaced; input/assets cannot be used as output.")
+    parser.add_argument("--assets", help="Optional alternative assets directory (must contain runtime/, vendor/ and geo/). Defaults to the bundled assets; use it to customise wording without forking the whole skill.")
     args = parser.parse_args(argv)
     try:
+        assets = Path(args.assets).resolve() if args.assets else ASSETS
         output = Path(args.output).resolve()
         protected = {Path(args.data).resolve()}
-        if output in protected or output == ASSETS or ASSETS in output.parents:
+        if output in protected or output == assets or assets in output.parents:
             raise DataError("Output must differ from input files and bundled assets.")
         if output.suffix.lower() not in (".html", ".htm"):
             raise DataError("Output must use an .html or .htm extension.")
-        rendered = build_html(load_json(args.data))
+        rendered = build_html(load_json(args.data), assets=assets)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(rendered, encoding="utf-8")
     except (DataError, OSError, ValueError) as error:
